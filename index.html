@@ -932,7 +932,8 @@ function renderSales(){
             '<td class="num"><strong>'+peso(s.total)+'</strong></td></tr>'+
             (s.change>0?'<tr><td>Change</td><td></td><td class="num">'+peso(s.change)+'</td></tr>':'')+
             '</tbody></table>'+
-            '<div style="display:flex;gap:8px;margin-top:12px">'+
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'+
+              '<button class="btn outline sm" data-act="when">Edit date &amp; time</button>'+
               '<button class="btn outline sm" data-act="print">Print receipt</button>'+
               (s.voided?'':'<button class="btn danger sm" data-act="void">Void sale</button>')+
             '</div>'+
@@ -949,6 +950,64 @@ function voidSale(id){
     afterSalesChanged();
     scheduleSync(); toast('Sale voided');
   },true);
+}
+
+// A sale rung up after the fact — or on a tablet with the wrong clock — lands
+// on the wrong day, which quietly moves the day's takings in the books too.
+function editWhen(id){
+  const s=S.sales.find(x=>x.id===id); if(!s) return;
+  const d=new Date(s.ts);
+  const two=n=>String(n).padStart(2,'0');
+  const dVal=d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate());
+  const tVal=two(d.getHours())+':'+two(d.getMinutes());
+
+  openModal(
+    '<h3>Date &amp; time</h3>'+
+    '<p class="hint">'+esc(s.items.map(i=>i.qty+'× '+i.name).join(', '))+' · '+peso(s.total)+'</p>'+
+    '<div class="field"><label>Date</label><input id="wDate" type="date" value="'+dVal+'"></div>'+
+    '<div class="field"><label>Time</label><input id="wTime" type="time" value="'+tVal+'"></div>'+
+    '<p class="hint" id="wPreview" style="margin:0 0 12px"></p>'+
+    '<div class="modal-actions"><button class="btn ghost" id="wCancel">Cancel</button>'+
+    '<button class="btn primary" id="wSave">Save</button></div>',
+    m=>{
+      const dateEl=$('#wDate',m), timeEl=$('#wTime',m), prev=$('#wPreview',m);
+      // Spell the result out: a mistyped year is otherwise invisible until the
+      // sale disappears from the day it belonged to.
+      const read=()=>{
+        const [y,mo,da]=(dateEl.value||'').split('-').map(Number);
+        const [hh,mi]=(timeEl.value||'').split(':').map(Number);
+        if(!y||!mo||!da||isNaN(hh)||isNaN(mi)) return null;
+        const t=new Date(y,mo-1,da,hh,mi,0,0);
+        return isNaN(t.getTime())?null:t;
+      };
+      const paint=()=>{
+        const t=read();
+        if(!t){ prev.textContent='Pick a date and a time.'; prev.style.color='var(--ember)'; return; }
+        prev.style.color='var(--mid)';
+        prev.textContent = t.toLocaleString('en-PH',{weekday:'short',year:'numeric',month:'short',
+                                                     day:'numeric',hour:'numeric',minute:'2-digit'})
+          + (t.getTime()>Date.now() ? ' — that is in the future' : '');
+      };
+      paint();
+      dateEl.addEventListener('input',paint); timeEl.addEventListener('input',paint);
+      $('#wCancel',m).onclick=closeModal;
+      $('#wSave',m).onclick=()=>{
+        const t=read();
+        if(!t){ toast('Pick a date and a time'); return; }
+        if(t.getTime()===s.ts){ closeModal(); return; }
+        s.ts=t.getTime(); touch(s);
+        // Keep the list in order, then let the books re-read BOTH the day it
+        // left and the day it joined.
+        S.sales.sort((a,b)=>b.ts-a.ts);
+        persist.sales();
+        afterSalesChanged();
+        closeModal();
+        renderSales(); renderReport(); renderCart(); scheduleSync();
+        toast('Moved to '+t.toLocaleString('en-PH',{month:'short',day:'numeric',
+                                                    hour:'numeric',minute:'2-digit'}));
+      };
+    }
+  );
 }
 
 function printReceipt(id){
@@ -1247,6 +1306,7 @@ $('#salesPane').addEventListener('click',e=>{
   if(b.dataset.act==='toggle') card.classList.toggle('open');
   else if(b.dataset.act==='void') voidSale(id);
   else if(b.dataset.act==='print') printReceipt(id);
+  else if(b.dataset.act==='when') editWhen(id);
 });
 
 $('#reportPane').addEventListener('click',e=>{

@@ -7,7 +7,7 @@ own database tables, so the two businesses never mix.
 | Tab | |
 |---|---|
 | **Sell** | Product tiles by category, running cart, cash-and-change keypad |
-| **Sales** | Every sale by day — expand, void, or print a receipt |
+| **Sales** | Every sale by day — expand, re-date, void, or print a receipt |
 | **Report** | Takings by period, by item and by category, CSV export |
 | **Items** | Add, edit and remove products, prices, and payment methods |
 | **Books** | Days, wages, expenses, and the printed monthly report |
@@ -41,6 +41,16 @@ Sales taken before this existed count as Cash.
 
 All three are the same web app; the Mac and Android builds bundle it and add
 printing and CSV saving, which a plain web view cannot do on its own.
+
+## Fixing a sale's date and time
+
+Tap a sale in **Sales**, then **Edit date & time**. Useful when a sale is rung
+up after the fact, or the tablet's clock was wrong.
+
+Moving a sale to another day rewrites the takings on **both** days in Books —
+the one it left and the one it joined — and a day left with no sales at all
+disappears rather than sitting at zero. The modal spells the new date out in
+words, so a mistyped year is obvious before you save.
 
 ## Data
 
