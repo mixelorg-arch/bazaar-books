@@ -18,8 +18,10 @@ strips, bundles) is a starting point — all of it is editable in **Items**.
 ## Mode of payment
 
 Charging a sale asks how it was paid: **Cash, GCash, Maya, Maribank, BPI,
-BDO** — editable in **Items → Payment methods**, and synced, so every device
-offers the same list.
+BDO**. Edit the list under **Items → Payment methods** — the switch at the top
+of the Items tab — or tap **Edit methods** on the Charge sheet itself. Add,
+rename and remove methods freely; the list is synced, so every device offers
+the same one.
 
 Cash is the only one that asks for an amount and works out change; a transfer
 is always for the exact total, so the keypad gets out of the way. The method

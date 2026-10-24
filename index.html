@@ -453,7 +453,12 @@ const fmtDay = k=>{
   if(d===t-86400000) return 'Yesterday';
   return new Date(d).toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric'});
 };
-function load(k,fb){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch(e){return fb;} }
+// The fallback is handed back as a COPY. Returning DEFAULT_CATALOG or
+// DEFAULT_METHODS itself aliased the live list onto the defaults, so renaming
+// a method quietly rewrote the default it was supposed to be restorable to —
+// and "Restore defaults" then restored the edits.
+const copy = v => (v===undefined ? v : JSON.parse(JSON.stringify(v)));
+function load(k,fb){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):copy(fb);}catch(e){return copy(fb);} }
 function save(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
 function buzz(ms){ try{ navigator.vibrate && navigator.vibrate(ms||8); }catch(e){} }
 
@@ -809,7 +814,10 @@ function openCharge(){
   let method = (methods.find(m=>isCash(m.name)) || methods[0] || {name:'Cash'}).name;
 
   openModal(
-    '<h3>Charge '+peso(total)+'</h3><p class="hint">How are they paying?</p>'+
+    '<h3>Charge '+peso(total)+'</h3>'+
+    '<p class="hint">How are they paying? '+
+      '<button id="editPays" style="color:var(--ink);text-decoration:underline;font-size:14px;padding:0">Edit methods</button>'+
+    '</p>'+
     '<div class="pick" id="payPick">'+methods.map(m=>
       '<button data-pay="'+esc(m.name)+'" aria-pressed="'+(m.name===method)+'">'+esc(m.name)+'</button>').join('')+
     '</div>'+
@@ -842,6 +850,12 @@ function openCharge(){
       paint(); paintMode();
       m.addEventListener('click',e=>{
         const b=e.target.closest('button'); if(!b) return;
+        if(b.id==='editPays'){
+          closeModal(); itemsSeg='methods';
+          $$('#tabs button').forEach(x=>x.setAttribute('aria-selected', String(x.dataset.tab==='items')));
+          $$('.view').forEach(v=>v.classList.toggle('on', v.id==='view-items'));
+          renderItems(); return;
+        }
         if(b.dataset.pay!==undefined){ method=b.dataset.pay; buzz(5); paintMode(); return; }
         if(b.dataset.k!==undefined){
           const k=b.dataset.k;
@@ -1045,13 +1059,43 @@ function exportCsv(){
 }
 
 /* ============ items ============ */
+let itemsSeg = 'products';
+
+function methodsCard(){
+  return '<div class="card"><h3>Payment methods</h3>'+
+    liveMethods().map(m=>
+      '<div class="item-row" data-mid="'+m.id+'">'+
+        '<div class="info"><div class="nm">'+esc(m.name)+'</div></div>'+
+        '<button class="iconbtn" data-act="medit" aria-label="Edit">Edit</button>'+
+        '<button class="iconbtn danger" data-act="mdel" aria-label="Delete">×</button>'+
+      '</div>').join('') +
+    (liveMethods().length?'':'<div class="empty">No payment methods. Add one, or restore the defaults.</div>')+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+
+      '<button class="btn primary sm" id="addMethod">+ Add method</button>'+
+      '<button class="btn outline sm" id="resetMethods">Restore defaults</button>'+
+    '</div>'+
+    '<p class="hint" style="margin:12px 0 0;color:var(--mid)">Offered at Charge. Cash is the only one that asks for an amount and works out change.</p>'+
+  '</div>';
+}
+
 function renderItems(){
+  const seg =
+    '<nav class="seg" id="itSeg">'+
+      '<button data-it="products" aria-selected="'+(itemsSeg==='products')+'">Products</button>'+
+      '<button data-it="methods" aria-selected="'+(itemsSeg==='methods')+'">Payment methods</button>'+
+    '</nav>';
+
+  if(itemsSeg === 'methods'){
+    $('#itemsPane').innerHTML = seg + methodsCard();
+    return;
+  }
+
   const groups={};
   live().forEach(i=>{ (groups[i.cat]=groups[i.cat]||[]).push(i); });
   const keys=cats();
-  $('#itemsPane').innerHTML =
+  $('#itemsPane').innerHTML = seg +
     '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
-      '<button class="btn primary sm" id="addItem">+ Add service</button>'+
+      '<button class="btn primary sm" id="addItem">+ Add product</button>'+
       '<button class="btn outline sm" id="resetCatalog">Restore defaults</button>'+
     '</div>'+
     keys.map(c=>
@@ -1064,21 +1108,7 @@ function renderItems(){
             '<button class="iconbtn danger" data-act="del" aria-label="Delete">×</button>'+
           '</div>').join('')+
       '</div>').join('') +
-    (keys.length?'':'<div class="card"><div class="empty">No services yet. Add one to start.</div></div>') +
-    '<div class="card"><h3>Payment methods</h3>'+
-      liveMethods().map(m=>
-        '<div class="item-row" data-mid="'+m.id+'">'+
-          '<div class="info"><div class="nm">'+esc(m.name)+'</div></div>'+
-          '<button class="iconbtn" data-act="medit" aria-label="Edit">Edit</button>'+
-          '<button class="iconbtn danger" data-act="mdel" aria-label="Delete">×</button>'+
-        '</div>').join('') +
-      (liveMethods().length?'':'<div class="empty">No payment methods. Add one, or restore the defaults.</div>')+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+
-        '<button class="btn primary sm" id="addMethod">+ Add method</button>'+
-        '<button class="btn outline sm" id="resetMethods">Restore defaults</button>'+
-      '</div>'+
-      '<p class="hint" style="margin:12px 0 0;color:var(--mid)">Offered at Charge. Cash is the only one that asks for an amount and works out change.</p>'+
-    '</div>';
+    (keys.length?'':'<div class="card"><div class="empty">No products yet. Add one to start.</div></div>');
 }
 
 function methodForm(existing){
@@ -1109,9 +1139,9 @@ function methodForm(existing){
 function itemForm(existing){
   const list=cats();
   openModal(
-    '<h3>'+(existing?'Edit service':'New service')+'</h3>'+
+    '<h3>'+(existing?'Edit product':'New product')+'</h3>'+
     '<p class="hint">This appears as a tile on the Sell screen.</p>'+
-    '<div class="field"><label>Service name</label><input id="fName" type="text" placeholder="e.g. Print Color – Long" value="'+(existing?esc(existing.name):'')+'"></div>'+
+    '<div class="field"><label>Product name</label><input id="fName" type="text" placeholder="e.g. Print Color – Long" value="'+(existing?esc(existing.name):'')+'"></div>'+
     '<div class="field"><label>Price (₱)</label><input id="fPrice" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0.00" value="'+(existing?existing.price:'')+'"></div>'+
     '<div class="field"><label>Category</label><select id="fCat">'+
       list.map(c=>'<option value="'+esc(c)+'"'+(existing&&existing.cat===c?' selected':'')+'>'+esc(c)+'</option>').join('')+
@@ -1128,14 +1158,14 @@ function itemForm(existing){
         const name=$('#fName',m).value.trim();
         const price=parseFloat($('#fPrice',m).value);
         let cat = sel.value==='__new' ? $('#fNewCat',m).value.trim() : sel.value;
-        if(!name){ toast('Enter a service name'); return; }
+        if(!name){ toast('Enter a product name'); return; }
         if(isNaN(price)||price<0){ toast('Enter a valid price'); return; }
         if(!cat) cat='Others';
         if(existing){ existing.name=name; existing.price=price; existing.cat=cat; touch(existing); }
         else S.catalog.push(touch({id:uid(), cat:cat, name:name, price:price, deleted:false}));
         persist.catalog(); closeModal();
         renderChips(); renderGrid(); renderItems(); scheduleSync();
-        toast(existing?'Service updated':'Service added');
+        toast(existing?'Product updated':'Product added');
       };
       setTimeout(()=>$('#fName',m).focus(),50);
     }
@@ -1244,6 +1274,7 @@ $('#reportPane').addEventListener('click',e=>{
 
 $('#itemsPane').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.it!==undefined){ itemsSeg=b.dataset.it; buzz(5); renderItems(); return; }
   if(b.id==='addItem'){ itemForm(null); return; }
   if(b.id==='resetCatalog'){
     confirmModal('Restore default services?','Your current product list is replaced with the default bazaar set. Sales history is not affected.','Restore',()=>{
@@ -1289,7 +1320,7 @@ $('#itemsPane').addEventListener('click',e=>{
   else if(b.dataset.act==='del'){
     confirmModal('Delete "'+item.name+'"?','It is removed from the Sell screen. Past sales keep their record.','Delete',()=>{
       touch(item); item.deleted=true; persist.catalog();
-      renderChips(); renderGrid(); renderItems(); scheduleSync(); toast('Service deleted');
+      renderChips(); renderGrid(); renderItems(); scheduleSync(); toast('Product deleted');
     },true);
   }
 });

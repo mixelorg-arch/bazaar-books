@@ -100,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate,
           // Opening Items renders the payment-method list, which is the point
           // of the check. The app quits straight after, so nothing is left.
           var it=document.querySelector('#tabs button[data-tab="items"]'); if(it) it.click();
+          var seg=document.querySelector('#itSeg button[data-it="methods"]'); if(seg) seg.click();
           return JSON.stringify({title:document.title,
           shop:document.getElementById('shopName').textContent,
           tiles:document.querySelectorAll('.tile[data-id]').length,
