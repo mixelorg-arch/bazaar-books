@@ -1,0 +1,1900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f5f5">
+<title>Bazaar Till</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#f5f5f5;
+  --paper:#ffffff;
+  --surface-alt:#fafafa;
+  --ink:#0a0a0a;
+  --ink-soft:#171717;
+  --mid:#737373;
+  --hairline:#e5e5e5;
+  --ember:#e7000b;
+
+  --r-int:18px;
+  --r-card:24px;
+  --r-sm:6px;
+  --r-nest:10px;
+
+  --shadow:0 0 0 1px rgba(10,10,10,.05), 0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1);
+  --font:"Geist","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* An author display rule outranks the browser's own [hidden] styling, so say it
+   once here rather than per component — otherwise hidden things stay on screen. */
+[hidden]{display:none !important}
+html,body{height:100%}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font-family:var(--font);font-size:14px;line-height:1.43;
+  color-scheme:light;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+}
+button,input,select{font:inherit;color:inherit;touch-action:manipulation}
+button{border:0;background:none;cursor:pointer}
+.nosel{-webkit-user-select:none;user-select:none}
+
+/* ---------- shell ---------- */
+.app{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+header.top{
+  display:flex;align-items:center;gap:16px;
+  padding:12px 20px;background:var(--paper);border-bottom:1px solid var(--hairline);
+  flex:none;
+}
+.brand{display:flex;flex-direction:column;min-width:0}
+.brand h1{margin:0;font-size:18px;font-weight:600;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .sub{font-size:12px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase}
+
+nav.tabs{display:flex;gap:4px;background:var(--canvas);padding:4px;border-radius:var(--r-int);margin-left:auto}
+nav.tabs button{
+  padding:9px 18px;border-radius:14px;font-size:14px;font-weight:500;color:var(--mid);
+  min-height:44px;
+}
+nav.tabs button[aria-selected="true"]{background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}
+
+.daystat{
+  display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+  padding:6px 16px;border:1px solid var(--hairline);border-radius:var(--r-int);
+}
+.daystat .lbl{font-size:11px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase}
+.daystat .val{font-size:18px;font-weight:600;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+
+.pill{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;min-height:44px;
+  border:1px solid var(--hairline);border-radius:var(--r-int);
+  font-size:13px;font-weight:500;color:var(--mid);white-space:nowrap;
+}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--hairline);flex:none}
+.pill .dot.ok{background:#171717}
+.pill .dot.busy{background:#737373}
+.pill .dot.bad{background:var(--ember)}
+.pill button{font-size:13px;font-weight:500;color:var(--ink);text-decoration:underline;padding:4px}
+
+main{flex:1;min-height:0;display:flex;overflow:hidden}
+.view{display:none;flex:1;min-height:0;overflow:hidden}
+.view.on{display:flex}
+
+/* ---------- sell ---------- */
+.sell-left{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.chips{display:flex;gap:8px;padding:16px 20px 4px;overflow-x:auto;flex:none;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:none;padding:9px 18px;border-radius:var(--r-int);border:1px solid var(--hairline);
+  background:transparent;color:var(--ink);font-size:14px;font-weight:500;white-space:nowrap;min-height:44px;
+}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface-alt);border-color:var(--ink)}
+
+.grid{
+  flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));
+  gap:12px;padding:16px 20px 24px;align-content:start;
+}
+.tile{
+  background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-card);
+  box-shadow:var(--shadow);padding:16px;min-height:108px;
+  display:flex;flex-direction:column;justify-content:space-between;text-align:left;gap:8px;
+  transition:transform .08s ease, background .12s ease, color .12s ease;
+}
+.tile .cat{font-size:11px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase}
+.tile .nm{font-size:15px;font-weight:500;line-height:1.25;letter-spacing:-.1px}
+.tile .pr{font-size:20px;font-weight:600;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.tile:active{transform:scale(.97)}
+.tile.hit{background:var(--ink);color:var(--surface-alt);border-color:var(--ink)}
+.tile.hit .cat,.tile.hit .pr{color:var(--surface-alt)}
+.tile.add{border-style:dashed;box-shadow:none;background:transparent;align-items:center;justify-content:center;color:var(--mid)}
+.tile.add .nm{font-size:15px;color:var(--mid)}
+
+/* ---------- cart ---------- */
+aside.cart{
+  width:380px;flex:none;background:var(--paper);border-left:1px solid var(--hairline);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px;flex:none}
+.cart-head h2{margin:0;font-size:18px;font-weight:600;letter-spacing:-.3px}
+.link{font-size:14px;font-weight:500;color:var(--mid);padding:8px 4px;min-height:40px}
+.link.danger{color:var(--ember)}
+.lines{flex:1;min-height:0;overflow-y:auto;padding:0 14px 8px}
+.line{
+  display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--hairline);
+}
+.line:last-child{border-bottom:0}
+.line .info{flex:1;min-width:0}
+.line .nm{font-size:14px;font-weight:500;line-height:1.3}
+.line .meta{font-size:12px;color:var(--mid);font-variant-numeric:tabular-nums}
+.step{display:flex;align-items:center;gap:2px;background:var(--canvas);border-radius:var(--r-int);padding:2px}
+.step button{width:40px;height:40px;border-radius:15px;font-size:20px;font-weight:500;color:var(--ink);display:grid;place-items:center}
+.step button:active{background:var(--hairline)}
+.step .qty{min-width:40px;height:40px;border-radius:15px;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;background:var(--paper);box-shadow:var(--shadow)}
+.line .lt{width:78px;text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.empty{padding:40px 20px;text-align:center;color:var(--mid);font-size:14px}
+
+.cart-foot{flex:none;padding:14px 20px 20px;border-top:1px solid var(--hairline);background:var(--surface-alt)}
+.sumrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.sumrow .k{font-size:12px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase}
+.sumrow .v{font-size:36px;font-weight:600;letter-spacing:-.9px;font-variant-numeric:tabular-nums}
+.btn{
+  width:100%;min-height:56px;border-radius:var(--r-int);font-size:16px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 16px;
+}
+.btn.primary{background:var(--ink);color:var(--surface-alt)}
+.btn.primary:active{background:var(--ink-soft)}
+.btn.primary:disabled{background:var(--hairline);color:var(--mid)}
+.btn.ghost{background:var(--canvas);color:var(--ink)}
+.btn.outline{background:transparent;color:var(--ink);border:1px solid var(--hairline)}
+.btn.danger{background:transparent;color:var(--ember);border:1px solid var(--hairline)}
+.btn.sm{min-height:44px;font-size:14px;width:auto;padding:8px 18px}
+
+/* ---------- scroll panes ---------- */
+.pane{flex:1;min-height:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow);padding:20px}
+.card h3{margin:0 0 14px;font-size:18px;font-weight:600;letter-spacing:-.3px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-card);box-shadow:var(--shadow);padding:20px}
+.stat .k{font-size:11px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase}
+.stat .v{font-size:30px;font-weight:600;letter-spacing:-.75px;font-variant-numeric:tabular-nums;margin-top:6px}
+
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase;text-align:left;padding:0 8px 10px}
+td{padding:12px 8px;border-top:1px solid var(--hairline);font-size:14px;vertical-align:middle}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+
+.sale{border:1px solid var(--hairline);border-radius:var(--r-card);background:var(--paper);box-shadow:var(--shadow);overflow:hidden}
+.sale-hd{display:flex;align-items:center;gap:14px;padding:16px 20px;width:100%;text-align:left;min-height:64px}
+.sale-hd .tm{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;width:92px;flex:none}
+.sale-hd .ds{flex:1;min-width:0;font-size:13px;color:var(--mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sale-hd .tt{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.sale.void .tm,.sale.void .ds,.sale.void .tt{text-decoration:line-through;color:var(--mid)}
+.sale-bd{display:none;padding:0 20px 16px;border-top:1px solid var(--hairline)}
+.sale.open .sale-bd{display:block}
+.daygroup{display:flex;align-items:baseline;justify-content:space-between;padding:10px 4px 2px}
+.daygroup .d{font-size:12px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase}
+.daygroup .t{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:var(--r-int);font-size:12px;font-weight:500;letter-spacing:.6px}
+.badge.soft{background:var(--canvas);color:var(--ink-soft)}
+.badge.solid{background:var(--ink-soft);color:var(--surface-alt)}
+.badge.void{background:transparent;color:var(--ember);border:1px solid var(--hairline)}
+
+.item-row{display:flex;align-items:center;gap:12px;padding:12px 8px;border-top:1px solid var(--hairline)}
+.item-row:first-of-type{border-top:0}
+.item-row .info{flex:1;min-width:0}
+.item-row .nm{font-size:15px;font-weight:500}
+.item-row .pr{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;width:92px;text-align:right}
+.iconbtn{width:44px;height:44px;border-radius:var(--r-int);border:1px solid var(--hairline);display:grid;place-items:center;font-size:15px}
+.iconbtn:active{background:var(--canvas)}
+.iconbtn.danger{color:var(--ember)}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(10,10,10,.4);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.scrim.on{display:flex}
+.modal{background:var(--paper);border-radius:var(--r-card);box-shadow:0 20px 50px rgba(0,0,0,.18);width:100%;max-width:460px;max-height:92dvh;overflow-y:auto;padding:20px}
+.modal h3{margin:0 0 4px;font-size:24px;font-weight:600;letter-spacing:-.6px}
+.modal p.hint{margin:0 0 16px;font-size:14px;color:var(--mid)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase;margin-bottom:6px}
+.field input,.field select{
+  width:100%;background:var(--canvas);border:1px solid transparent;border-radius:var(--r-int);
+  padding:14px 16px;font-size:16px;min-height:52px;
+}
+.field input:focus,.field select:focus{outline:none;background:var(--paper);border-color:var(--hairline)}
+.modal-actions{display:flex;gap:8px;margin-top:8px}
+.modal-actions .btn{flex:1}
+
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.pad button{
+  min-height:62px;border-radius:var(--r-int);background:var(--canvas);
+  font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;
+}
+.pad button:active{background:var(--hairline)}
+.pad button.wide{grid-column:span 2}
+.display{
+  background:var(--canvas);border-radius:var(--r-int);padding:16px 18px;
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+}
+.display .k{font-size:12px;font-weight:500;letter-spacing:.6px;color:var(--mid);text-transform:uppercase}
+.display .v{font-size:32px;font-weight:600;letter-spacing:-.8px;font-variant-numeric:tabular-nums}
+.quick{display:flex;gap:8px;margin-top:12px}
+.pick{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.pick button{
+  padding:9px 16px;min-height:44px;border-radius:var(--r-int);
+  border:1px solid var(--hairline);background:transparent;color:var(--ink);
+  font-size:14px;font-weight:500;white-space:nowrap;
+}
+.pick button[aria-pressed="true"]{background:var(--ink);color:var(--surface-alt);border-color:var(--ink)}
+.quick button{flex:1;min-width:0;min-height:50px;border-radius:var(--r-int);border:1px solid var(--hairline);font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
+.quick button:active{background:var(--canvas)}
+
+.toast{
+  position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(16px);
+  background:var(--ink);color:var(--surface-alt);padding:12px 20px;border-radius:var(--r-int);
+  font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:.18s ease;z-index:80;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (hover:hover){
+  .tile:hover{border-color:#d4d4d4}
+  .chip:hover{background:var(--canvas)}
+  .iconbtn:hover{background:var(--canvas)}
+  nav.tabs button:hover{color:var(--ink)}
+}
+
+/* ---------- portrait / narrow ---------- */
+@media (max-width:900px){
+  header.top{flex-wrap:wrap;gap:10px;padding:10px 14px}
+  nav.tabs{order:3;width:100%;margin-left:0}
+  nav.tabs button{flex:1}
+  .daystat{margin-left:auto}
+  .view.on{flex-direction:column}
+  .sell-left{flex:1}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));padding:12px 14px 16px;gap:10px}
+  .chips{padding:12px 14px 2px}
+  aside.cart{
+    width:100%;border-left:0;border-top:1px solid var(--hairline);
+    max-height:52dvh;flex:none;
+  }
+  .pane{padding:14px}
+}
+
+/* ---------- books ---------- */
+.bk-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.bk-bar select{background:var(--paper);border:1px solid var(--hairline);border-radius:var(--r-int);
+  min-height:44px;padding:0 14px;font-family:var(--font);font-size:15px;color:var(--ink)}
+.bk-bar .spacer{flex:1}
+.bk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.bk-stat{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:16px 18px}
+.bk-stat .k{display:block;font-size:11px;font-weight:500;letter-spacing:.6px;color:var(--mid);
+  text-transform:uppercase;margin-bottom:6px}
+.bk-stat .v{font-size:22px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+/* No red for a loss. In this design red means "this destroys something";
+   spending it on negative numbers weakens the warning it is there to give.
+   The minus sign carries the meaning on its own. */
+.seg{display:flex;gap:4px;background:var(--paper);border-radius:var(--r-int);padding:4px;
+  box-shadow:var(--shadow);margin-bottom:16px;overflow-x:auto}
+.seg button{flex:1;min-height:44px;white-space:nowrap;border-radius:14px;background:transparent;
+  border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--mid);padding:0 14px}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--surface-alt)}
+.bk-card{background:var(--paper);border-radius:var(--r-card);box-shadow:var(--shadow);padding:6px 18px;margin-bottom:12px}
+.bk-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--hairline);
+  min-height:44px}
+.bk-row:last-child{border-bottom:none}
+.bk-row .grow{flex:1;min-width:0}
+.bk-row .t{font-size:15px;font-weight:500}
+.bk-row .s{font-size:12.5px;color:var(--mid);margin-top:2px}
+.bk-row .amt{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;font-weight:500;border-radius:999px;padding:2px 9px;
+  background:var(--canvas);color:var(--mid);margin-left:6px}
+/* The palette here is achromatic by design, so these say their piece through
+   weight and outline rather than by introducing colours of their own. */
+.tag.till{background:var(--canvas);color:var(--mid)}
+.tag.manual{background:transparent;color:var(--ink);border:1px solid var(--hairline);font-weight:600}
+.tag.unpaid{background:transparent;color:var(--ember);border:1px solid var(--hairline)}
+.bk-empty{color:var(--mid);font-size:14px;text-align:center;padding:26px 0}
+.pay-line{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--hairline)}
+.pay-line:last-child{border-bottom:none}
+.pay-line .who{font-size:15px}
+.pay-line button{min-height:44px;min-width:110px;border-radius:var(--r-int);border:1px solid var(--hairline);
+  background:var(--canvas);font-family:var(--font);font-size:15px;font-weight:500;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.pay-line button.set{background:var(--ink);color:var(--surface-alt);border-color:var(--ink)}
+@media (max-width:720px){ .bk-stats{grid-template-columns:repeat(2,1fr)} }
+
+/* ---------- receipt printing ---------- */
+#receipt{display:none}
+@media print{
+  body{background:#fff}
+  .app,.scrim,.toast{display:none !important}
+  #receipt{display:block;width:100%;font-family:var(--font);color:#000;padding:0}
+  #receipt .r-shop{font-size:16px;font-weight:600;text-align:center;margin-bottom:2px}
+  #receipt .r-meta{font-size:11px;text-align:center;color:#444;margin-bottom:10px}
+  #receipt table{width:100%;border-collapse:collapse;font-size:12px}
+  #receipt td{padding:3px 0;border:0}
+  #receipt .r-tot{border-top:1px solid #000;margin-top:8px;padding-top:6px;font-size:14px;font-weight:600;display:flex;justify-content:space-between}
+  #receipt .r-foot{margin-top:12px;text-align:center;font-size:11px;color:#444}
+
+  #bookReport{display:block;width:100%;font-family:var(--font);color:#000}
+  #bookReport h2{font-size:18px;margin:0 0 2px}
+  #bookReport .r-sub{font-size:11px;color:#555;margin-bottom:14px}
+  #bookReport h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;
+    margin:16px 0 6px}
+  #bookReport table{width:100%;border-collapse:collapse;font-size:11px}
+  #bookReport th{text-align:left;border-bottom:1px solid #000;padding:5px 6px;font-size:9.5px;
+    text-transform:uppercase;letter-spacing:.4px}
+  #bookReport td{border-bottom:1px solid #ddd;padding:5px 6px;font-variant-numeric:tabular-nums}
+  #bookReport tr.tot td{border-top:1px solid #000;border-bottom:0;font-weight:700}
+  #bookReport .num{text-align:right}
+  #bookReport .foot{margin-top:18px;border-top:1px solid #ddd;padding-top:8px;font-size:9.5px;color:#666}
+}
+#bookReport{display:none}
+</style>
+</head>
+<body class="nosel">
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1 id="shopName">Mixel Bazaar</h1>
+      <div class="sub">Bazaar Till</div>
+    </div>
+    <div class="daystat">
+      <span class="lbl">Today</span>
+      <span class="val" id="dayTotal">₱0.00</span>
+    </div>
+    <div class="pill" id="syncPill" hidden>
+      <span class="dot" id="syncDot"></span>
+      <span id="syncText">Offline</span>
+      <button id="syncAction" hidden>Sign in</button>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="sell" aria-selected="true">Sell</button>
+      <button data-tab="sales" aria-selected="false">Sales</button>
+      <button data-tab="report" aria-selected="false">Report</button>
+      <button data-tab="items" aria-selected="false">Items</button>
+      <button data-tab="books" aria-selected="false">Books</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- SELL -->
+    <section class="view on" id="view-sell">
+      <div class="sell-left">
+        <div class="chips" id="chips"></div>
+        <div class="grid" id="grid"></div>
+      </div>
+      <aside class="cart" id="cartPanel">
+        <div class="cart-head">
+          <h2>Current Sale</h2>
+          <button class="link danger" id="clearCart">Clear</button>
+        </div>
+        <div class="lines" id="lines"></div>
+        <div class="cart-foot">
+          <div class="sumrow">
+            <span class="k" id="cartCount">0 items</span>
+            <span class="v" id="cartTotal">₱0.00</span>
+          </div>
+          <button class="btn primary" id="chargeBtn" disabled>Charge</button>
+        </div>
+      </aside>
+    </section>
+
+    <!-- SALES -->
+    <section class="view" id="view-sales">
+      <div class="pane" id="salesPane"></div>
+    </section>
+
+    <!-- REPORT -->
+    <section class="view" id="view-report">
+      <div class="pane" id="reportPane"></div>
+    </section>
+
+    <!-- ITEMS -->
+    <!-- BOOKS -->
+    <section class="view" id="view-books">
+      <div class="pane">
+      <div class="bk-bar">
+        <select id="bkMonth" aria-label="Month"></select>
+        <span class="spacer"></span>
+        <button class="btn outline sm" id="bkPdf">Export PDF</button>
+      </div>
+      <div class="bk-stats" id="bkStats"></div>
+      <nav class="seg" id="bkSeg">
+        <button data-bk="summary" aria-selected="true">Summary</button>
+        <button data-bk="days" aria-selected="false">Days</button>
+        <button data-bk="expenses" aria-selected="false">Expenses</button>
+        <button data-bk="people" aria-selected="false">People</button>
+      </nav>
+      <div id="bkBody"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-items">
+      <div class="pane" id="itemsPane"></div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<div id="receipt"></div>
+<div id="bookReport"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ helpers ============ */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>Array.prototype.slice.call(r.querySelectorAll(s));
+const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const peso = n=>'₱'+(Math.round(Number(n)*100)/100).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dayKey = ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const startOfToday = ()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime();};
+const fmtTime = ts=>new Date(ts).toLocaleTimeString('en-PH',{hour:'numeric',minute:'2-digit'});
+const fmtDay = k=>{
+  const t=startOfToday(), d=new Date(k+'T00:00:00').getTime();
+  if(d===t) return 'Today';
+  if(d===t-86400000) return 'Yesterday';
+  return new Date(d).toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric'});
+};
+function load(k,fb){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch(e){return fb;} }
+function save(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
+function buzz(ms){ try{ navigator.vibrate && navigator.vibrate(ms||8); }catch(e){} }
+
+let toastT;
+function toast(msg){
+  const el=$('#toast'); el.textContent=msg; el.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'),1600);
+}
+
+/* ============ data ============ */
+const DEFAULT_CATALOG = [
+  {id:'d1', cat:'3D Prints', name:'Keychain',               price:120},
+  {id:'d2', cat:'3D Prints', name:'Flexi Axolotl',          price:250},
+  {id:'d3', cat:'3D Prints', name:'Articulated Dragon',     price:350},
+  {id:'d4', cat:'3D Prints', name:'Figurine – Small',       price:200},
+  {id:'d5', cat:'3D Prints', name:'Figurine – Large',       price:450},
+  {id:'d6', cat:'3D Prints', name:'Phone Stand',            price:180},
+  {id:'d7', cat:'3D Prints', name:'Fidget Toy',             price:150},
+  {id:'s1', cat:'Stickers',  name:'Sticker – Single',       price:25},
+  {id:'s2', cat:'Stickers',  name:'Holographic Sticker',    price:50},
+  {id:'s3', cat:'Stickers',  name:'Sticker Sheet',          price:80},
+  {id:'s4', cat:'Stickers',  name:'Sticker Pack (5)',       price:150},
+  {id:'s5', cat:'Stickers',  name:'Vinyl Decal',            price:100},
+  {id:'b1', cat:'Photobooth',name:'Photo Strip',            price:100},
+  {id:'b2', cat:'Photobooth',name:'Photo 4R',               price:80},
+  {id:'b3', cat:'Photobooth',name:'Extra Copy',             price:50},
+  {id:'b4', cat:'Photobooth',name:'Digital Copy',           price:50},
+  {id:'o1', cat:'Bundles',   name:'Sticker + Keychain',     price:200},
+  {id:'o2', cat:'Bundles',   name:'Booth + Sticker Sheet',  price:160}
+];
+
+// How customers pay. Editable in Items, same as the price list.
+const DEFAULT_METHODS = [
+  {id:'m1', name:'Cash'},
+  {id:'m2', name:'GCash'},
+  {id:'m3', name:'Maya'},
+  {id:'m4', name:'Maribank'},
+  {id:'m5', name:'BPI'},
+  {id:'m6', name:'BDO'}
+];
+
+const S = {
+  catalog : load('bz_catalog', DEFAULT_CATALOG),
+  methods : load('bz_methods', DEFAULT_METHODS),
+  sales   : load('bz_sales', []),
+  cart    : load('bz_cart', []),
+  // The books. Unlike the print shop till, these are the bazaar's own
+  // bazaar_* tables — nothing here is shared with the sales ledger.
+  days    : load('bz_days', []),
+  people  : load('bz_people', []),
+  expenses: load('bz_expenses', []),
+  settings: load('bz_settings', {shop:'Mixel Bazaar'}),
+  syncedAt: load('bz_syncedat', '')
+};
+const persist = {
+  catalog :()=>save('bz_catalog',S.catalog),
+  methods :()=>save('bz_methods',S.methods),
+  sales   :()=>save('bz_sales',S.sales),
+  cart    :()=>save('bz_cart',S.cart),
+  days    :()=>save('bz_days',S.days),
+  people  :()=>save('bz_people',S.people),
+  expenses:()=>save('bz_expenses',S.expenses),
+  set     :()=>save('bz_settings',S.settings),
+  mark    :()=>save('bz_syncedat',S.syncedAt)
+};
+
+// Mark a record as changed here, so the sync layer knows to push it. The
+// server restamps updated_at on write; this local stamp only orders things
+// until then.
+function touch(o){ o._dirty=true; o.updated_at=new Date().toISOString(); return o; }
+
+// A tablet should not fill its storage with years of history. Sales already
+// pushed to the server are dropped locally past this age; unpushed ones never
+// are. The full record stays in Supabase.
+const KEEP_DAYS = 365;
+const BOOTSTRAP_DAYS = 90;   // how far back a newly signed-in tablet pulls
+function pruneOldSales(){
+  const cutoff = Date.now() - KEEP_DAYS*86400000;
+  const before = S.sales.length;
+  S.sales = S.sales.filter(s => s._dirty || s.ts >= cutoff);
+  if(S.sales.length !== before) persist.sales();
+}
+
+let filter = 'All';
+
+/* ============ derived ============ */
+const live = ()=>S.catalog.filter(i=>!i.deleted);
+const liveMethods = ()=>S.methods.filter(m=>!m.deleted);
+// Sales taken before payment methods existed were all cash.
+const payOf = s => s.payment || 'Cash';
+const cats = ()=>{ const out=[]; live().forEach(i=>{ if(out.indexOf(i.cat)<0) out.push(i.cat); }); return out; };
+const cartTotal = ()=>S.cart.reduce((s,l)=>s+l.price*l.qty,0);
+const cartCount = ()=>S.cart.reduce((s,l)=>s+l.qty,0);
+const liveSales = ()=>S.sales.filter(s=>!s.voided && !s.deleted);
+const todayTotal = ()=>liveSales().filter(s=>s.ts>=startOfToday()).reduce((s,x)=>s+x.total,0);
+
+
+/* ================================================================
+   BOOKS — wages, expenses and what is actually left over.
+
+   The till answers "what did we take?". These answers "what did we
+   keep?". They share one database with the standalone sales ledger,
+   so a day recorded here shows up there and the other way round.
+   ================================================================ */
+
+// A negative amount reads as −₱1,600.00, not ₱-1,600.00.
+const pesoSigned = n => (Number(n)<0 ? '−'+peso(Math.abs(n)) : peso(n));
+const monthKey = k => (k||'').slice(0,7);
+const thisMonth = () => dayKey(Date.now()).slice(0,7);
+const monthName = k => {
+  const p = k.split('-');
+  return new Date(Number(p[0]), Number(p[1])-1, 1)
+    .toLocaleDateString('en-PH', {month:'long', year:'numeric'});
+};
+// Monday-start weeks, so a week is a real week and not a seven-day slice.
+function weekStart(k){
+  const d = new Date(k+'T00:00:00');
+  d.setDate(d.getDate() - ((d.getDay()+6)%7));
+  return dayKey(d.getTime());
+}
+function weekEnd(k){
+  const d = new Date(k+'T00:00:00'); d.setDate(d.getDate()+6);
+  return dayKey(d.getTime());
+}
+// A plain date, unlike fmtDay which says "Today" — right in a list, wrong in a
+// week range and wrong on a printed report someone reads next month.
+const fmtShort = k => new Date(k+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric'});
+const weekLabel = k => fmtShort(k) + ' – ' + fmtShort(weekEnd(k));
+
+/* ---- the till feeding the books ---- */
+// What the till rang up on a given day, ignoring voided and deleted sales.
+function tillTotalFor(k){
+  return liveSales()
+    .filter(s => dayKey(s.ts) === k)
+    .reduce((sum, s) => sum + Number(s.total || 0), 0);
+}
+function tillCountFor(k){
+  return liveSales().filter(s => dayKey(s.ts) === k).length;
+}
+const liveDays     = () => S.days.filter(d => !d.deleted);
+const livePeople   = () => S.people.filter(p => !p.deleted);
+const liveExpenses = () => S.expenses.filter(e => !e.deleted);
+const activePeople = () => livePeople().filter(p => !p.archived);
+
+const dayFor = k => liveDays().find(d => d.date === k);
+
+// The figure a day is worth. The till owns it unless someone deliberately
+// typed over it, in which case their number stands and the day is flagged.
+function takingsFor(d){
+  if(!d) return 0;
+  return d.sales_source === 'manual' ? Number(d.teamSales||0) : tillTotalFor(d.date);
+}
+function isOverridden(d){
+  return d && d.sales_source === 'manual' && tillCountFor(d.date) > 0;
+}
+function wagesFor(d){
+  if(!d) return 0;
+  return Object.values(d.pay||{}).reduce((s,v)=>s+Number(v||0),0) + Number(d.incentive||0);
+}
+
+/* Keep a day's stored takings equal to the till, so every other app that
+   reads this database sees the right number without knowing about the till. */
+function syncDayWithTill(k){
+  let d = dayFor(k);
+  const total = tillTotalFor(k);
+  if(!d){
+    if(total <= 0) return null;              // nothing sold, nothing to record
+    d = {id:'d'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+         date:k, teamSales:total, pay:{}, incentive:0, paid:false, remarks:'',
+         sales_source:'till', deleted:false};
+    S.days.push(touch(d));
+    persist.days();
+    return d;
+  }
+  if(d.sales_source === 'manual') return d;          // their figure stands
+  if(Number(d.teamSales||0) !== total){
+    d.teamSales = total;
+    touch(d); persist.days();
+  }
+  // A day the till created, then everything on it was voided, and nobody
+  // recorded any work: it is noise, so it goes rather than sitting at zero.
+  const bare = total === 0
+    && !Object.keys(d.pay||{}).length && !Number(d.incentive||0) && !(d.remarks||'').trim();
+  if(bare){ d.deleted = true; touch(d); persist.days(); return null; }
+  return d;
+}
+// Called after anything that changes what the till has taken. It revisits days
+// that still have sales AND days the till created before, so voiding the last
+// sale of a day updates that day instead of leaving a stale figure behind.
+function refreshTillDays(){
+  const withSales = liveSales().map(s => dayKey(s.ts));
+  const fromTill  = liveDays().filter(d => d.sales_source !== 'manual').map(d => d.date);
+  [...new Set([...withSales, ...fromTill])].forEach(syncDayWithTill);
+}
+
+/* ---- month arithmetic ---- */
+function monthFigures(m){
+  const days = liveDays().filter(d => monthKey(d.date) === m);
+  const exps = liveExpenses().filter(e => e.month === m);
+  const takings  = days.reduce((s,d)=>s+takingsFor(d),0);
+  const wages    = days.reduce((s,d)=>s+wagesFor(d),0);
+  const expenses = exps.reduce((s,e)=>s+Number(e.amount||0),0);
+  return {days, exps, takings, wages, expenses, net: takings-wages-expenses};
+}
+function monthsWithData(){
+  const set = new Set();
+  liveDays().forEach(d => set.add(monthKey(d.date)));
+  liveExpenses().forEach(e => set.add(e.month));
+  liveSales().forEach(s => set.add(dayKey(s.ts).slice(0,7)));
+  set.add(thisMonth());
+  return [...set].filter(Boolean).sort().reverse();
+}
+function weeksOf(m){
+  const weeks = {};
+  liveDays().filter(d => monthKey(d.date) === m).forEach(d => {
+    const w = weekStart(d.date);
+    if(!weeks[w]) weeks[w] = {takings:0, wages:0};
+    weeks[w].takings += takingsFor(d);
+    weeks[w].wages   += wagesFor(d);
+  });
+  return weeks;
+}
+
+/* ============ modal ============ */
+/* A fresh node every time: listeners attached inside a modal die with it,
+   otherwise they stack up on a reused element and fire once per past open. */
+function openModal(html, afterRender){
+  const scrim=$('#scrim'), old=$('#modal');
+  const m=document.createElement('div');
+  m.className='modal'; m.id='modal'; m.innerHTML=html;
+  scrim.replaceChild(m, old);
+  scrim.classList.add('on');
+  if(afterRender) afterRender(m);
+  m.scrollTop=0;
+}
+function closeModal(){ $('#scrim').classList.remove('on'); $('#modal').innerHTML=''; }
+$('#scrim').addEventListener('click',e=>{ if(e.target.id==='scrim') closeModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+/* generic numeric pad -> onDone(number|null) */
+function numPad(opts){
+  const o = Object.assign({title:'Enter', hint:'', label:'Amount', value:'', quick:[], decimal:true, cta:'Done'}, opts);
+  let buf = String(o.value||'');
+  let fresh = buf !== '';   // first keypress replaces the pre-filled value
+  const rows = ['1','2','3','4','5','6','7','8','9', o.decimal?'.':'', '0','⌫'];
+  openModal(
+    '<h3>'+esc(o.title)+'</h3>'+(o.hint?'<p class="hint">'+esc(o.hint)+'</p>':'<div style="height:14px"></div>')+
+    '<div class="display"><span class="k">'+esc(o.label)+'</span><span class="v" id="padVal">0</span></div>'+
+    (o.quick.length?'<div class="quick">'+o.quick.map(q=>'<button data-q="'+q+'">'+q+'</button>').join('')+'</div>':'')+
+    '<div class="pad">'+rows.map(r=>r===''?'<button disabled style="visibility:hidden"></button>':'<button data-k="'+r+'">'+r+'</button>').join('')+'</div>'+
+    '<div class="modal-actions"><button class="btn ghost" id="padCancel">Cancel</button><button class="btn primary" id="padOk">'+esc(o.cta)+'</button></div>',
+    m=>{
+      const disp=$('#padVal',m);
+      const paint=()=>{ disp.textContent = buf===''?'0':buf; };
+      paint();
+      m.addEventListener('click',e=>{
+        const b=e.target.closest('button'); if(!b) return;
+        if(b.dataset.k!==undefined){
+          const k=b.dataset.k;
+          if(k==='⌫'){ if(fresh){ buf=''; fresh=false; } else buf=buf.slice(0,-1); }
+          else if(k==='.'){ if(fresh){ buf='0'; fresh=false; } if(buf.indexOf('.')<0) buf=(buf===''?'0':buf)+'.'; }
+          else { if(fresh){ buf=''; fresh=false; } if(!(buf==='0'&&k==='0')) buf=(buf==='0'?'':buf)+k; }
+          if(buf.length>9) buf=buf.slice(0,9);
+          buzz(5); paint();
+        } else if(b.dataset.q!==undefined){ buf=b.dataset.q; fresh=false; buzz(5); paint(); }
+        else if(b.id==='padCancel'){ closeModal(); }
+        else if(b.id==='padOk'){ const n=parseFloat(buf); closeModal(); o.onDone(isNaN(n)?null:n); }
+      });
+    }
+  );
+}
+
+function confirmModal(title,msg,ctaText,onYes,danger){
+  openModal(
+    '<h3>'+esc(title)+'</h3><p class="hint">'+esc(msg)+'</p>'+
+    '<div class="modal-actions"><button class="btn ghost" id="cNo">Cancel</button>'+
+    '<button class="btn '+(danger?'danger':'primary')+'" id="cYes">'+esc(ctaText)+'</button></div>',
+    m=>{
+      $('#cNo',m).onclick=closeModal;
+      $('#cYes',m).onclick=()=>{ closeModal(); onYes(); };
+    }
+  );
+}
+
+/* ============ cart ============ */
+function addToCart(item){
+  const ex = S.cart.find(l=>l.itemId===item.id && l.price===item.price);
+  if(ex) ex.qty++;
+  else S.cart.push({lid:uid(), itemId:item.id, name:item.name, cat:item.cat, price:item.price, qty:1});
+  buzz(8); persist.cart(); renderCart();
+}
+function setQty(lid,q){
+  const i=S.cart.findIndex(l=>l.lid===lid); if(i<0) return;
+  if(q<=0) S.cart.splice(i,1); else S.cart[i].qty=q;
+  persist.cart(); renderCart();
+}
+
+/* ============ render: tiles ============ */
+function renderChips(){
+  const list=['All'].concat(cats());
+  if(list.indexOf(filter)<0) filter='All';
+  $('#chips').innerHTML = list.map(c=>
+    '<button class="chip" data-cat="'+esc(c)+'" aria-pressed="'+(c===filter)+'">'+esc(c)+'</button>'
+  ).join('');
+}
+function renderGrid(){
+  const items = live().filter(i=>filter==='All'||i.cat===filter);
+  $('#grid').innerHTML =
+    items.map(i=>
+      '<button class="tile" data-id="'+i.id+'">'+
+        '<span class="cat">'+esc(i.cat)+'</span>'+
+        '<span class="nm">'+esc(i.name)+'</span>'+
+        '<span class="pr">'+peso(i.price)+'</span>'+
+      '</button>'
+    ).join('') +
+    '<button class="tile add" id="tileCustom"><span class="nm">+ Custom amount</span></button>';
+}
+function renderCart(){
+  const lines=$('#lines');
+  if(!S.cart.length){
+    lines.innerHTML='<div class="empty">No items yet.<br>Tap a service to start a sale.</div>';
+  } else {
+    lines.innerHTML = S.cart.map(l=>
+      '<div class="line" data-lid="'+l.lid+'">'+
+        '<div class="info"><div class="nm">'+esc(l.name)+'</div>'+
+        '<div class="meta">'+peso(l.price)+' each</div></div>'+
+        '<div class="step">'+
+          '<button data-act="dec" aria-label="Less">−</button>'+
+          '<button class="qty" data-act="qty">'+l.qty+'</button>'+
+          '<button data-act="inc" aria-label="More">+</button>'+
+        '</div>'+
+        '<div class="lt">'+peso(l.price*l.qty)+'</div>'+
+      '</div>'
+    ).join('');
+  }
+  const n=cartCount(), t=cartTotal();
+  $('#cartCount').textContent = n+(n===1?' item':' items');
+  $('#cartTotal').textContent = peso(t);
+  $('#chargeBtn').disabled = n===0;
+  $('#chargeBtn').textContent = n===0 ? 'Charge' : 'Charge '+peso(t);
+  $('#dayTotal').textContent = peso(todayTotal());
+}
+
+/* ============ charge ============ */
+function openCharge(){
+  const total=cartTotal(); if(total<=0) return;
+  let buf='';
+  const bump = v=>Math.ceil(total/v)*v;
+  const quick=[total, bump(50), bump(100), 500, 1000].filter((v,i,a)=>a.indexOf(v)===i && v>=total).slice(0,4);
+  const methods = liveMethods();
+  // Cash is the one that needs counting out; everything else is paid exactly.
+  const isCash = n => /^cash$/i.test(n);
+  let method = (methods.find(m=>isCash(m.name)) || methods[0] || {name:'Cash'}).name;
+
+  openModal(
+    '<h3>Charge '+peso(total)+'</h3><p class="hint">How are they paying?</p>'+
+    '<div class="pick" id="payPick">'+methods.map(m=>
+      '<button data-pay="'+esc(m.name)+'" aria-pressed="'+(m.name===method)+'">'+esc(m.name)+'</button>').join('')+
+    '</div>'+
+    '<div id="cashBox">'+
+      '<div class="display"><span class="k">Cash</span><span class="v" id="cashVal">—</span></div>'+
+      '<div class="display" style="margin-top:8px"><span class="k">Change</span><span class="v" id="chgVal">—</span></div>'+
+      '<div class="quick">'+quick.map((q,i)=>'<button data-q="'+q+'">'+(i===0?'Exact':peso(q).replace('.00',''))+'</button>').join('')+'</div>'+
+      '<div class="pad">'+['1','2','3','4','5','6','7','8','9','C','0','⌫'].map(k=>'<button data-k="'+k+'">'+k+'</button>').join('')+'</div>'+
+    '</div>'+
+    '<div class="display" id="paidBox" hidden><span class="k">Paid</span><span class="v">'+peso(total)+'</span></div>'+
+    '<div class="modal-actions"><button class="btn ghost" id="chCancel">Cancel</button>'+
+    '<button class="btn primary" id="chOk">Complete Sale</button></div>',
+    m=>{
+      const cv=$('#cashVal',m), gv=$('#chgVal',m);
+      const paint=()=>{
+        const cash=buf===''?null:parseFloat(buf);
+        cv.textContent = cash===null?'—':peso(cash);
+        gv.textContent = (cash===null||cash<total)?'—':peso(cash-total);
+        gv.style.color = (cash!==null&&cash<total)?'var(--ember)':'';
+        if(cash!==null&&cash<total) gv.textContent='short '+peso(total-cash);
+      };
+      // A transfer is always for the exact amount, so the keypad and the
+      // change line only make sense for cash.
+      const paintMode=()=>{
+        const cash=isCash(method);
+        $('#cashBox',m).hidden = !cash;
+        $('#paidBox',m).hidden = cash;
+        $$('#payPick button',m).forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.pay===method)));
+      };
+      paint(); paintMode();
+      m.addEventListener('click',e=>{
+        const b=e.target.closest('button'); if(!b) return;
+        if(b.dataset.pay!==undefined){ method=b.dataset.pay; buzz(5); paintMode(); return; }
+        if(b.dataset.k!==undefined){
+          const k=b.dataset.k;
+          if(k==='⌫') buf=buf.slice(0,-1);
+          else if(k==='C') buf='';
+          else buf=(buf==='0'?'':buf)+k;
+          if(buf.length>7) buf=buf.slice(0,7);
+          buzz(5); paint();
+        } else if(b.dataset.q!==undefined){ buf=String(b.dataset.q); buzz(5); paint(); }
+        else if(b.id==='chCancel') closeModal();
+        else if(b.id==='chOk'){
+          if(!isCash(method)){ closeModal(); completeSale(total, method); return; }
+          const cash = buf===''?total:parseFloat(buf);
+          if(cash<total){ toast('Cash is less than the total'); return; }
+          closeModal(); completeSale(cash, method);
+        }
+      });
+    }
+  );
+}
+
+// Every path that changes what the till has taken ends here, so the day's
+// entry in the books follows the till without anyone retyping a figure.
+function afterSalesChanged(){
+  refreshTillDays();
+  if($('#view-books').classList.contains('on')) renderBooks();
+}
+
+function completeSale(cash, payment){
+  const total=cartTotal();
+  if(!S.cart.length || total<=0) return;
+  const sale={
+    id:uid(), ts:Date.now(),
+    items:S.cart.map(l=>({name:l.name,cat:l.cat,price:l.price,qty:l.qty})),
+    total:total, cash:cash, change:cash-total, payment:payment||'Cash', voided:false
+  };
+  S.sales.unshift(touch(sale)); persist.sales();
+  afterSalesChanged();
+  S.cart=[]; persist.cart();
+  renderCart(); renderSales(); renderReport(); scheduleSync();
+  buzz(20);
+  const chg = sale.change>0 ? ' — change '+peso(sale.change) : '';
+  toast('Sale saved '+peso(total)+' · '+sale.payment+chg);
+}
+
+/* ============ sales ============ */
+function renderSales(){
+  const pane=$('#salesPane');
+  const shown=S.sales.filter(s=>!s.deleted);
+  if(!shown.length){ pane.innerHTML='<div class="card"><div class="empty">No sales recorded yet.</div></div>'; return; }
+  const groups={};
+  shown.forEach(s=>{ (groups[dayKey(s.ts)] = groups[dayKey(s.ts)]||[]).push(s); });
+  const keys=Object.keys(groups).sort().reverse();
+  pane.innerHTML = keys.map(k=>{
+    const list=groups[k];
+    const tot=list.filter(s=>!s.voided).reduce((a,b)=>a+b.total,0);
+    const cnt=list.filter(s=>!s.voided).length;
+    return '<div class="daygroup"><span class="d">'+esc(fmtDay(k))+' · '+cnt+' sale'+(cnt===1?'':'s')+'</span><span class="t">'+peso(tot)+'</span></div>'+
+      list.map(s=>
+        '<div class="sale'+(s.voided?' void':'')+'" data-sid="'+s.id+'" style="margin-bottom:8px">'+
+          '<button class="sale-hd" data-act="toggle">'+
+            '<span class="tm">'+esc(fmtTime(s.ts))+'</span>'+
+            '<span class="ds">'+esc(s.items.map(i=>i.qty+'× '+i.name).join(', '))+'</span>'+
+            (/^cash$/i.test(payOf(s))?'':'<span class="badge soft">'+esc(payOf(s))+'</span>')+
+            (s.voided?'<span class="badge void">Void</span>':'')+
+            '<span class="tt">'+peso(s.total)+'</span>'+
+          '</button>'+
+          '<div class="sale-bd">'+
+            '<table><tbody>'+s.items.map(i=>
+              '<tr><td>'+esc(i.name)+'</td><td class="num">'+i.qty+' × '+peso(i.price)+'</td>'+
+              '<td class="num" style="width:96px">'+peso(i.qty*i.price)+'</td></tr>'
+            ).join('')+
+            '<tr><td><strong>Total</strong></td><td class="num">'+esc(payOf(s))+' '+peso(s.cash)+'</td>'+
+            '<td class="num"><strong>'+peso(s.total)+'</strong></td></tr>'+
+            (s.change>0?'<tr><td>Change</td><td></td><td class="num">'+peso(s.change)+'</td></tr>':'')+
+            '</tbody></table>'+
+            '<div style="display:flex;gap:8px;margin-top:12px">'+
+              '<button class="btn outline sm" data-act="print">Print receipt</button>'+
+              (s.voided?'':'<button class="btn danger sm" data-act="void">Void sale</button>')+
+            '</div>'+
+          '</div>'+
+        '</div>'
+      ).join('');
+  }).join('');
+}
+
+function voidSale(id){
+  const s=S.sales.find(x=>x.id===id); if(!s) return;
+  confirmModal('Void this sale?','It stays in the record for reference but is removed from all totals.','Void sale',()=>{
+    s.voided=true; touch(s); persist.sales(); renderSales(); renderReport(); renderCart();
+    afterSalesChanged();
+    scheduleSync(); toast('Sale voided');
+  },true);
+}
+
+function printReceipt(id){
+  const s=S.sales.find(x=>x.id===id); if(!s) return;
+  $('#receipt').innerHTML =
+    '<div class="r-shop">'+esc(S.settings.shop)+'</div>'+
+    '<div class="r-meta">'+new Date(s.ts).toLocaleString('en-PH')+' · No. '+esc(s.id.slice(-6).toUpperCase())+(s.voided?' · VOID':'')+'</div>'+
+    '<table><tbody>'+s.items.map(i=>
+      '<tr><td>'+esc(i.name)+'<br><span style="color:#555">'+i.qty+' × '+peso(i.price)+'</span></td>'+
+      '<td style="text-align:right;vertical-align:top">'+peso(i.qty*i.price)+'</td></tr>').join('')+
+    '</tbody></table>'+
+    '<div class="r-tot"><span>TOTAL</span><span>'+peso(s.total)+'</span></div>'+
+    '<div class="r-tot" style="border:0;font-weight:400;font-size:12px;padding-top:2px"><span>'+esc(payOf(s))+'</span><span>'+peso(s.cash)+'</span></div>'+
+    (s.change>0?'<div class="r-tot" style="border:0;font-weight:400;font-size:12px;padding-top:0"><span>Change</span><span>'+peso(s.change)+'</span></div>':'')+
+    '<div class="r-foot">Thank you!</div>';
+  setTimeout(()=>window.print(),50);
+}
+
+/* ============ report ============ */
+let period='today';
+function periodStart(p){
+  const t=startOfToday();
+  if(p==='today') return t;
+  if(p==='week')  return t-6*86400000;
+  if(p==='month') return t-29*86400000;
+  return 0;
+}
+function renderReport(){
+  const from=periodStart(period);
+  const rows=liveSales().filter(s=>s.ts>=from);
+  const total=rows.reduce((a,b)=>a+b.total,0);
+  const cnt=rows.length;
+  const avg=cnt?total/cnt:0;
+
+  const byItem={}, byCat={}, byPay={};
+  rows.forEach(s=>{
+    const k=payOf(s);
+    byPay[k]=byPay[k]||{n:0,rev:0};
+    byPay[k].n++; byPay[k].rev+=s.total;
+  });
+  rows.forEach(s=>s.items.forEach(i=>{
+    const k=i.name;
+    byItem[k]=byItem[k]||{name:i.name,cat:i.cat||'—',qty:0,rev:0};
+    byItem[k].qty+=i.qty; byItem[k].rev+=i.qty*i.price;
+    const c=i.cat||'Others';
+    byCat[c]=(byCat[c]||0)+i.qty*i.price;
+  }));
+  const items=Object.keys(byItem).map(k=>byItem[k]).sort((a,b)=>b.rev-a.rev);
+  const catRows=Object.keys(byCat).map(k=>[k,byCat[k]]).sort((a,b)=>b[1]-a[1]);
+  const payRows=Object.keys(byPay).map(k=>[k,byPay[k]]).sort((a,b)=>b[1].rev-a[1].rev);
+
+  const labels={today:'Today',week:'Last 7 days',month:'Last 30 days',all:'All time'};
+  $('#reportPane').innerHTML =
+    '<div class="chips" style="padding:0 0 4px">'+
+      ['today','week','month','all'].map(p=>'<button class="chip" data-period="'+p+'" aria-pressed="'+(p===period)+'">'+labels[p]+'</button>').join('')+
+    '</div>'+
+    '<div class="stats">'+
+      '<div class="stat"><div class="k">Sales</div><div class="v">'+peso(total)+'</div></div>'+
+      '<div class="stat"><div class="k">Transactions</div><div class="v">'+cnt+'</div></div>'+
+      '<div class="stat"><div class="k">Average sale</div><div class="v">'+peso(avg)+'</div></div>'+
+      '<div class="stat"><div class="k">Items sold</div><div class="v">'+items.reduce((a,b)=>a+b.qty,0)+'</div></div>'+
+    '</div>'+
+    '<div class="card"><h3>By service</h3>'+
+      (items.length
+        ? '<table><thead><tr><th>Service</th><th>Category</th><th class="num">Qty</th><th class="num">Sales</th></tr></thead><tbody>'+
+          items.map(i=>'<tr><td>'+esc(i.name)+'</td><td style="color:var(--mid)">'+esc(i.cat)+'</td>'+
+          '<td class="num">'+i.qty+'</td><td class="num"><strong>'+peso(i.rev)+'</strong></td></tr>').join('')+
+          '</tbody></table>'
+        : '<div class="empty">Nothing sold in this period.</div>')+
+    '</div>'+
+    (catRows.length?'<div class="card"><h3>By category</h3><table><tbody>'+
+      catRows.map(r=>'<tr><td>'+esc(r[0])+'</td><td class="num">'+Math.round(r[1]/total*100)+'%</td>'+
+      '<td class="num" style="width:120px"><strong>'+peso(r[1])+'</strong></td></tr>').join('')+
+      '</tbody></table></div>':'')+
+    (payRows.length?'<div class="card"><h3>By payment</h3><table><tbody>'+
+      payRows.map(r=>'<tr><td>'+esc(r[0])+'</td>'+
+      '<td class="num" style="color:var(--mid)">'+r[1].n+(r[1].n===1?' sale':' sales')+'</td>'+
+      '<td class="num">'+Math.round(r[1].rev/total*100)+'%</td>'+
+      '<td class="num" style="width:120px"><strong>'+peso(r[1].rev)+'</strong></td></tr>').join('')+
+      '</tbody></table></div>':'')+
+    '<div class="card"><h3>Data</h3>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="btn outline sm" id="exportCsv">Export CSV</button>'+
+        '<button class="btn outline sm" id="renameShop">Shop name</button>'+
+        '<button class="btn danger sm" id="wipe">Clear all sales</button>'+
+      '</div>'+
+      '<p class="hint" style="margin:12px 0 0;color:var(--mid)">Everything is stored on this tablet only.</p>'+
+    '</div>';
+}
+
+function exportCsv(){
+  const head=['date','time','sale_id','status','payment','item','category','qty','unit_price','line_total','sale_total'];
+  const lines=[head.join(',')];
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  S.sales.slice().sort((a,b)=>a.ts-b.ts).forEach(s=>{
+    s.items.forEach(i=>{
+      lines.push([q(dayKey(s.ts)),q(fmtTime(s.ts)),q(s.id),q(s.voided?'void':'ok'),q(payOf(s)),q(i.name),q(i.cat||''),
+                  i.qty,i.price,(i.qty*i.price).toFixed(2),s.total.toFixed(2)].join(','));
+    });
+  });
+  const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='sales-'+dayKey(Date.now())+'.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
+  toast('CSV exported');
+}
+
+/* ============ items ============ */
+function renderItems(){
+  const groups={};
+  live().forEach(i=>{ (groups[i.cat]=groups[i.cat]||[]).push(i); });
+  const keys=cats();
+  $('#itemsPane').innerHTML =
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+      '<button class="btn primary sm" id="addItem">+ Add service</button>'+
+      '<button class="btn outline sm" id="resetCatalog">Restore defaults</button>'+
+    '</div>'+
+    keys.map(c=>
+      '<div class="card"><h3>'+esc(c)+'</h3>'+
+        groups[c].map(i=>
+          '<div class="item-row" data-id="'+i.id+'">'+
+            '<div class="info"><div class="nm">'+esc(i.name)+'</div></div>'+
+            '<div class="pr">'+peso(i.price)+'</div>'+
+            '<button class="iconbtn" data-act="edit" aria-label="Edit">Edit</button>'+
+            '<button class="iconbtn danger" data-act="del" aria-label="Delete">×</button>'+
+          '</div>').join('')+
+      '</div>').join('') +
+    (keys.length?'':'<div class="card"><div class="empty">No services yet. Add one to start.</div></div>') +
+    '<div class="card"><h3>Payment methods</h3>'+
+      liveMethods().map(m=>
+        '<div class="item-row" data-mid="'+m.id+'">'+
+          '<div class="info"><div class="nm">'+esc(m.name)+'</div></div>'+
+          '<button class="iconbtn" data-act="medit" aria-label="Edit">Edit</button>'+
+          '<button class="iconbtn danger" data-act="mdel" aria-label="Delete">×</button>'+
+        '</div>').join('') +
+      (liveMethods().length?'':'<div class="empty">No payment methods. Add one, or restore the defaults.</div>')+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+
+        '<button class="btn primary sm" id="addMethod">+ Add method</button>'+
+        '<button class="btn outline sm" id="resetMethods">Restore defaults</button>'+
+      '</div>'+
+      '<p class="hint" style="margin:12px 0 0;color:var(--mid)">Offered at Charge. Cash is the only one that asks for an amount and works out change.</p>'+
+    '</div>';
+}
+
+function methodForm(existing){
+  openModal(
+    '<h3>'+(existing?'Edit payment method':'New payment method')+'</h3>'+
+    '<p class="hint">It appears as a choice when you charge a sale.</p>'+
+    '<div class="field"><label>Name</label><input id="mName" type="text" placeholder="e.g. GCash" value="'+(existing?esc(existing.name):'')+'"></div>'+
+    '<div class="modal-actions"><button class="btn ghost" id="mCancel">Cancel</button>'+
+    '<button class="btn primary" id="mSave">Save</button></div>',
+    m=>{
+      $('#mCancel',m).onclick=closeModal;
+      $('#mSave',m).onclick=()=>{
+        const name=$('#mName',m).value.trim();
+        if(!name){ toast('Enter a name'); return; }
+        const clash=S.methods.find(x=>!x.deleted && x.id!==(existing&&existing.id)
+                                   && x.name.toLowerCase()===name.toLowerCase());
+        if(clash){ toast('That method already exists'); return; }
+        if(existing){ existing.name=name; touch(existing); }
+        else S.methods.push(touch({id:uid(), name:name, deleted:false}));
+        persist.methods(); closeModal(); renderItems(); scheduleSync();
+        toast(existing?'Payment method updated':'Payment method added');
+      };
+      setTimeout(()=>$('#mName',m).focus(),50);
+    }
+  );
+}
+
+function itemForm(existing){
+  const list=cats();
+  openModal(
+    '<h3>'+(existing?'Edit service':'New service')+'</h3>'+
+    '<p class="hint">This appears as a tile on the Sell screen.</p>'+
+    '<div class="field"><label>Service name</label><input id="fName" type="text" placeholder="e.g. Print Color – Long" value="'+(existing?esc(existing.name):'')+'"></div>'+
+    '<div class="field"><label>Price (₱)</label><input id="fPrice" type="number" inputmode="decimal" min="0" step="0.25" placeholder="0.00" value="'+(existing?existing.price:'')+'"></div>'+
+    '<div class="field"><label>Category</label><select id="fCat">'+
+      list.map(c=>'<option value="'+esc(c)+'"'+(existing&&existing.cat===c?' selected':'')+'>'+esc(c)+'</option>').join('')+
+      '<option value="__new">+ New category…</option></select></div>'+
+    '<div class="field" id="newCatWrap" style="display:none"><label>New category name</label><input id="fNewCat" type="text" placeholder="e.g. Tarpaulin"></div>'+
+    '<div class="modal-actions"><button class="btn ghost" id="fCancel">Cancel</button>'+
+    '<button class="btn primary" id="fSave">Save</button></div>',
+    m=>{
+      const sel=$('#fCat',m), wrap=$('#newCatWrap',m);
+      sel.onchange=()=>{ wrap.style.display = sel.value==='__new'?'block':'none'; if(sel.value==='__new') $('#fNewCat',m).focus(); };
+      if(!list.length){ sel.value='__new'; wrap.style.display='block'; }
+      $('#fCancel',m).onclick=closeModal;
+      $('#fSave',m).onclick=()=>{
+        const name=$('#fName',m).value.trim();
+        const price=parseFloat($('#fPrice',m).value);
+        let cat = sel.value==='__new' ? $('#fNewCat',m).value.trim() : sel.value;
+        if(!name){ toast('Enter a service name'); return; }
+        if(isNaN(price)||price<0){ toast('Enter a valid price'); return; }
+        if(!cat) cat='Others';
+        if(existing){ existing.name=name; existing.price=price; existing.cat=cat; touch(existing); }
+        else S.catalog.push(touch({id:uid(), cat:cat, name:name, price:price, deleted:false}));
+        persist.catalog(); closeModal();
+        renderChips(); renderGrid(); renderItems(); scheduleSync();
+        toast(existing?'Service updated':'Service added');
+      };
+      setTimeout(()=>$('#fName',m).focus(),50);
+    }
+  );
+}
+
+/* ============ events ============ */
+$('#tabs').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-tab]'); if(!b) return;
+  $$('#tabs button').forEach(x=>x.setAttribute('aria-selected', String(x===b)));
+  $$('.view').forEach(v=>v.classList.toggle('on', v.id==='view-'+b.dataset.tab));
+  if(b.dataset.tab==='sales') renderSales();
+  if(b.dataset.tab==='report') renderReport();
+  if(b.dataset.tab==='items') renderItems();
+  if(b.dataset.tab==='books'){ refreshTillDays(); renderBooks(); }
+});
+
+/* ============ books: wiring ============ */
+$('#bkMonth').addEventListener('change', e=>{ bkMonth = e.target.value; renderBooks(); });
+$('#bkSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-bk]'); if(!b) return;
+  bkSeg = b.dataset.bk; buzz(5); renderBooks();
+});
+$('#bkBody').addEventListener('click', e=>{
+  const b = e.target.closest('button');
+  if(b && b.id==='bkAddDay')    return editDay(dayKey(Date.now()));
+  if(b && b.id==='bkAddExp')    return editExpense(null);
+  if(b && b.id==='bkAddPerson') return editPerson(null);
+  const day = e.target.closest('[data-day]');    if(day) return editDay(day.dataset.day);
+  const exp = e.target.closest('[data-exp]');    if(exp) return editExpense(exp.dataset.exp);
+  const per = e.target.closest('[data-person]'); if(per) return editPerson(per.dataset.person);
+});
+$('#bkPdf').addEventListener('click', ()=>{
+  $('#bookReport').innerHTML = buildBookReport(bkMonth);
+  window.print();
+});
+
+$('#chips').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-cat]'); if(!b) return;
+  filter=b.dataset.cat; renderChips(); renderGrid();
+});
+
+$('#grid').addEventListener('click',e=>{
+  const custom=e.target.closest('#tileCustom');
+  if(custom){
+    numPad({title:'Custom amount', hint:'For jobs that are not on the tiles.', label:'Amount', quick:[25,50,100,200],
+      onDone:v=>{ if(v&&v>0){ S.cart.push({lid:uid(),itemId:'custom',name:'Custom job',cat:'Others',price:v,qty:1});
+        persist.cart(); renderCart(); } }});
+    return;
+  }
+  const t=e.target.closest('.tile[data-id]'); if(!t) return;
+  const item=S.catalog.find(i=>i.id===t.dataset.id); if(!item) return;
+  addToCart(item);
+  t.classList.add('hit'); setTimeout(()=>t.classList.remove('hit'),140);
+});
+
+$('#lines').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-act]'); if(!b) return;
+  const lid=b.closest('.line').dataset.lid;
+  const line=S.cart.find(l=>l.lid===lid); if(!line) return;
+  if(b.dataset.act==='inc') setQty(lid,line.qty+1);
+  else if(b.dataset.act==='dec') setQty(lid,line.qty-1);
+  else numPad({title:line.name, hint:peso(line.price)+' each — set the quantity. Zero removes the line.',
+    label:'Quantity', value:String(line.qty), decimal:false, quick:[5,10,20,50],
+    onDone:v=>{ if(v!==null) setQty(lid,Math.floor(v)); }});
+});
+
+$('#clearCart').addEventListener('click',()=>{
+  if(!S.cart.length) return;
+  confirmModal('Clear this sale?','All items in the current sale will be removed.','Clear',()=>{
+    S.cart=[]; persist.cart(); renderCart();
+  },true);
+});
+$('#chargeBtn').addEventListener('click',openCharge);
+
+$('#salesPane').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-act]'); if(!b) return;
+  const card=b.closest('.sale'); const id=card.dataset.sid;
+  if(b.dataset.act==='toggle') card.classList.toggle('open');
+  else if(b.dataset.act==='void') voidSale(id);
+  else if(b.dataset.act==='print') printReceipt(id);
+});
+
+$('#reportPane').addEventListener('click',e=>{
+  const p=e.target.closest('button[data-period]');
+  if(p){ period=p.dataset.period; renderReport(); return; }
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='exportCsv') exportCsv();
+  else if(b.id==='renameShop'){
+    openModal('<h3>Shop name</h3><p class="hint">Shown in the header and on printed receipts.</p>'+
+      '<div class="field"><input id="sName" type="text" value="'+esc(S.settings.shop)+'"></div>'+
+      '<div class="modal-actions"><button class="btn ghost" id="sNo">Cancel</button><button class="btn primary" id="sOk">Save</button></div>',
+      m=>{ $('#sNo',m).onclick=closeModal;
+           $('#sOk',m).onclick=()=>{ const v=$('#sName',m).value.trim()||'Mixel Bazaar';
+             S.settings.shop=v; persist.set(); $('#shopName').textContent=v; closeModal(); toast('Saved'); }; });
+  }
+  else if(b.id==='wipe'){
+    confirmModal('Clear all sales?','Every recorded sale will be permanently deleted. Your services stay. Export a CSV first if you need the record.','Delete all sales',()=>{
+      S.sales.forEach(x=>{ if(!x.deleted){ touch(x); x.deleted=true; } });
+      persist.sales(); renderSales(); renderReport(); renderCart();
+      afterSalesChanged();
+      scheduleSync(); toast('Sales cleared');
+    },true);
+  }
+});
+
+$('#itemsPane').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='addItem'){ itemForm(null); return; }
+  if(b.id==='resetCatalog'){
+    confirmModal('Restore default services?','Your current product list is replaced with the default bazaar set. Sales history is not affected.','Restore',()=>{
+      S.catalog.forEach(i=>{ if(!i.deleted){ touch(i); i.deleted=true; } });
+      DEFAULT_CATALOG.forEach(d=>{
+        let it=S.catalog.find(i=>i.id===d.id);
+        if(!it){ it={id:d.id}; S.catalog.push(it); }
+        it.name=d.name; it.cat=d.cat; it.price=d.price; it.deleted=false; touch(it);
+      });
+      persist.catalog();
+      filter='All'; renderChips(); renderGrid(); renderItems(); scheduleSync(); toast('Defaults restored');
+    },true);
+    return;
+  }
+  if(b.id==='addMethod'){ methodForm(null); return; }
+  if(b.id==='resetMethods'){
+    confirmModal('Restore default payment methods?','Cash, GCash, Maya, Maribank, BPI and BDO. Past sales keep whatever they were paid with.','Restore',()=>{
+      S.methods.forEach(m=>{ if(!m.deleted){ touch(m); m.deleted=true; } });
+      DEFAULT_METHODS.forEach(d=>{
+        let it=S.methods.find(m=>m.id===d.id);
+        if(!it){ it={id:d.id}; S.methods.push(it); }
+        it.name=d.name; it.deleted=false; touch(it);
+      });
+      persist.methods(); renderItems(); scheduleSync(); toast('Defaults restored');
+    },true);
+    return;
+  }
+  const mrow=b.closest('.item-row[data-mid]');
+  if(mrow){
+    const meth=S.methods.find(m=>m.id===mrow.dataset.mid); if(!meth) return;
+    if(b.dataset.act==='medit') methodForm(meth);
+    else if(b.dataset.act==='mdel'){
+      confirmModal('Delete "'+meth.name+'"?','It stops being offered at Charge. Past sales keep their record.','Delete',()=>{
+        touch(meth); meth.deleted=true; persist.methods();
+        renderItems(); scheduleSync(); toast('Payment method deleted');
+      },true);
+    }
+    return;
+  }
+  const row=b.closest('.item-row'); if(!row) return;
+  const item=S.catalog.find(i=>i.id===row.dataset.id); if(!item) return;
+  if(b.dataset.act==='edit') itemForm(item);
+  else if(b.dataset.act==='del'){
+    confirmModal('Delete "'+item.name+'"?','It is removed from the Sell screen. Past sales keep their record.','Delete',()=>{
+      touch(item); item.deleted=true; persist.catalog();
+      renderChips(); renderGrid(); renderItems(); scheduleSync(); toast('Service deleted');
+    },true);
+  }
+});
+
+/* keep day total honest across midnight / tab wake */
+setInterval(()=>{ $('#dayTotal').textContent=peso(todayTotal()); },60000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) renderCart(); });
+
+
+/* ============ sync ============
+   The till is offline-first on purpose: a shop tablet with no signal must
+   still be able to ring up a sale. localStorage is always the source of truth
+   for what is on screen; Supabase is where it is copied to when there is a
+   connection and someone is signed in. Nothing here ever blocks selling.
+   Data lands in bazaar_* tables — its own set, sharing no table with the
+   print shop till or the sales ledger, so the two businesses never mix. */
+const CFG = window.BAZAAR_CONFIG || {};
+const SYNC_ON = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
+const SHARED_EMAIL = (CFG.sharedEmail || '').trim();
+let sb=null, session=null, syncTimer=null, syncing=false;
+
+if(!S.settings.device){ S.settings.device = uid(); persist.set(); }
+
+// How each local collection maps onto its table, in both directions.
+const COLLECTIONS = [
+  { key:'catalog', table:'bazaar_services',
+    toRow: i => ({id:i.id, name:i.name, cat:i.cat, price:Number(i.price)||0, deleted:!!i.deleted}),
+    fromRow: r => ({id:r.id, name:r.name, cat:r.cat, price:Number(r.price)||0,
+                    deleted:!!r.deleted, updated_at:r.updated_at}) },
+  { key:'people', table:'bazaar_people',
+    toRow: p => ({id:p.id, name:p.name, archived:!!p.archived, deleted:!!p.deleted}),
+    fromRow: r => ({id:r.id, name:r.name, archived:!!r.archived,
+                    deleted:!!r.deleted, updated_at:r.updated_at}) },
+  { key:'days', table:'bazaar_days',
+    toRow: d => ({id:d.id, date:d.date, team_sales:Number(d.teamSales)||0, pay:d.pay||{},
+                  incentive:Number(d.incentive)||0, paid:!!d.paid, remarks:d.remarks||'',
+                  sales_source:d.sales_source||'till', deleted:!!d.deleted}),
+    fromRow: r => ({id:r.id, date:r.date, teamSales:Number(r.team_sales)||0, pay:r.pay||{},
+                    incentive:Number(r.incentive)||0, paid:!!r.paid, remarks:r.remarks||'',
+                    sales_source:r.sales_source||'manual', deleted:!!r.deleted,
+                    updated_at:r.updated_at}) },
+  { key:'expenses', table:'bazaar_expenses',
+    toRow: e => ({id:e.id, month:e.month, name:e.name, amount:Number(e.amount)||0,
+                  paid:!!e.paid, deleted:!!e.deleted}),
+    fromRow: r => ({id:r.id, month:r.month, name:r.name, amount:Number(r.amount)||0,
+                    paid:!!r.paid, deleted:!!r.deleted, updated_at:r.updated_at}) },
+  { key:'sales', table:'bazaar_sales',
+    toRow: s => ({id:s.id, sold_at:new Date(s.ts).toISOString(), items:s.items||[],
+                  total:Number(s.total)||0, cash:Number(s.cash)||0,
+                  change_due:Number(s.change)||0, payment:s.payment||'Cash',
+                  voided:!!s.voided,
+                  device:S.settings.device, deleted:!!s.deleted}),
+    fromRow: r => ({id:r.id, ts:Date.parse(r.sold_at), items:r.items||[],
+                    total:Number(r.total)||0, cash:Number(r.cash)||0,
+                    change:Number(r.change_due)||0, payment:r.payment||'Cash',
+                    voided:!!r.voided,
+                    deleted:!!r.deleted, updated_at:r.updated_at}) },
+  { key:'methods', table:'bazaar_methods',
+    toRow: m => ({id:m.id, name:m.name, deleted:!!m.deleted}),
+    fromRow: r => ({id:r.id, name:r.name, deleted:!!r.deleted, updated_at:r.updated_at}) }
+];
+
+// Look collections up by name. They used to be reached by index, which broke
+// the moment a new one was added in the middle.
+const COL = k => COLLECTIONS.find(c => c.key === k);
+
+const stamp = v => v ? Date.parse(v) : 0;
+
+// Last write wins, per row. A row changed here and not yet pushed always wins,
+// because it is about to be pushed and the server will restamp it.
+function merge(localRows, remoteRaw, fromRow){
+  const byId = new Map(localRows.map(r=>[r.id,r]));
+  remoteRaw.forEach(raw=>{
+    const incoming = fromRow(raw);
+    const current  = byId.get(incoming.id);
+    if(!current){ byId.set(incoming.id, incoming); return; }
+    if(current._dirty) return;
+    if(stamp(incoming.updated_at) >= stamp(current.updated_at)) byId.set(incoming.id, incoming);
+  });
+  return [...byId.values()];
+}
+
+function setSync(kind, note){
+  const pill=$('#syncPill');
+  if(!SYNC_ON){ pill.hidden=true; return; }
+  pill.hidden=false;
+  $('#syncDot').className='dot'+(kind==='ok'?' ok':kind==='syncing'?' busy':kind==='error'?' bad':'');
+  $('#syncText').textContent = note || ({
+    ok:'Synced', syncing:'Syncing…', error:'Not synced', signedout:'Local only', offline:'Offline'
+  }[kind] || 'Local only');
+  const act=$('#syncAction');
+  act.hidden=false;
+  act.textContent = session ? 'Sign out' : 'Sign in';
+}
+
+
+/* ============ books: rendering ============ */
+let bkMonth = thisMonth();
+let bkSeg   = 'summary';
+
+function renderBooks(){
+  const sel = $('#bkMonth');
+  const months = monthsWithData();
+  sel.innerHTML = months.map(m=>'<option value="'+m+'">'+esc(monthName(m))+'</option>').join('');
+  if(months.indexOf(bkMonth) < 0) bkMonth = months[0] || thisMonth();
+  sel.value = bkMonth;
+
+  const f = monthFigures(bkMonth);
+  $('#bkStats').innerHTML =
+    stat('Takings', peso(f.takings)) +
+    stat('Wages', peso(f.wages)) +
+    stat('Expenses', peso(f.expenses)) +
+    stat('Net', pesoSigned(f.net), f.net < 0);
+
+  $$('#bkSeg button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.bk===bkSeg)));
+  const body = $('#bkBody');
+  if(bkSeg === 'summary')       body.innerHTML = bkSummary(f);
+  else if(bkSeg === 'days')     body.innerHTML = bkDays(f);
+  else if(bkSeg === 'expenses') body.innerHTML = bkExpenses(f);
+  else                          body.innerHTML = bkPeople();
+}
+const stat = (k,v,neg)=>'<div class="bk-stat"><span class="k">'+esc(k)+'</span>'+
+  '<span class="v'+(neg?' neg':'')+'">'+esc(v)+'</span></div>';
+
+function bkSummary(f){
+  const weeks = weeksOf(bkMonth);
+  const keys = Object.keys(weeks).sort();
+  if(!keys.length && !f.exps.length)
+    return '<div class="bk-card"><div class="bk-empty">Nothing recorded for '+esc(monthName(bkMonth))+' yet.<br>'+
+           'Sales rung up on the till appear here on their own.</div></div>';
+  let html = '<div class="bk-card">';
+  keys.forEach(w=>{
+    const d = weeks[w], net = d.takings - d.wages;
+    html += '<div class="bk-row"><div class="grow"><div class="t">'+esc(weekLabel(w))+'</div>'+
+      '<div class="s">takings '+esc(peso(d.takings))+' · wages '+esc(peso(d.wages))+'</div></div>'+
+      '<div class="amt'+(net<0?' neg':'')+'">'+esc(pesoSigned(net))+'</div></div>';
+  });
+  html += '</div>';
+  html += '<div class="bk-card"><div class="bk-row"><div class="grow"><div class="t">Takings</div>'+
+    '<div class="s">what the till and any typed figures add up to</div></div>'+
+    '<div class="amt">'+esc(peso(f.takings))+'</div></div>'+
+    '<div class="bk-row"><div class="grow"><div class="t">Wages</div></div>'+
+    '<div class="amt">−'+esc(peso(f.wages))+'</div></div>'+
+    '<div class="bk-row"><div class="grow"><div class="t">Expenses</div></div>'+
+    '<div class="amt">−'+esc(peso(f.expenses))+'</div></div>'+
+    '<div class="bk-row"><div class="grow"><div class="t">Net for '+esc(monthName(bkMonth))+'</div></div>'+
+    '<div class="amt'+(f.net<0?' neg':'')+'">'+esc(pesoSigned(f.net))+'</div></div></div>';
+  return html;
+}
+
+function bkDays(f){
+  const days = f.days.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  let html = '<div class="bk-card">';
+  if(!days.length){
+    html += '<div class="bk-empty">No days yet this month.<br>Ring up a sale and the day appears here.</div>';
+  } else {
+    days.forEach(d=>{
+      const w = wagesFor(d), t = takingsFor(d);
+      const who = Object.keys(d.pay||{}).map(id=>{
+        const p = S.people.find(x=>x.id===id);
+        return p ? p.name : 'Removed';
+      });
+      const src = isOverridden(d) ? '<span class="tag manual">typed over</span>'
+                : d.sales_source === 'till' ? '<span class="tag till">from till</span>' : '';
+      const unpaid = w > 0 && !d.paid ? '<span class="tag unpaid">wages unpaid</span>' : '';
+      html += '<div class="bk-row" data-day="'+esc(d.date)+'">'+
+        '<div class="grow"><div class="t">'+esc(fmtDay(d.date))+src+unpaid+'</div>'+
+        '<div class="s">'+(who.length ? esc(who.join(', ')) + ' · wages ' + esc(peso(w))
+                                      : 'nobody recorded yet')+
+        (d.remarks ? ' · '+esc(d.remarks) : '')+'</div></div>'+
+        '<div class="amt">'+esc(peso(t))+'</div></div>';
+    });
+  }
+  html += '</div><button class="btn outline" id="bkAddDay">Record a day by hand</button>';
+  return html;
+}
+
+function bkExpenses(f){
+  let html = '<div class="bk-card">';
+  if(!f.exps.length){
+    html += '<div class="bk-empty">No expenses for '+esc(monthName(bkMonth))+'.</div>';
+  } else {
+    f.exps.forEach(e=>{
+      html += '<div class="bk-row" data-exp="'+esc(e.id)+'"><div class="grow">'+
+        '<div class="t">'+esc(e.name)+(e.paid?'':'<span class="tag unpaid">unpaid</span>')+'</div></div>'+
+        '<div class="amt">'+esc(peso(e.amount))+'</div></div>';
+    });
+  }
+  html += '</div><button class="btn outline" id="bkAddExp">Add an expense</button>';
+  return html;
+}
+
+function bkPeople(){
+  const people = livePeople();
+  let html = '<div class="bk-card">';
+  if(!people.length){
+    html += '<div class="bk-empty">Nobody added yet.<br>Add the people you pay, then record who worked each day.</div>';
+  } else {
+    people.forEach(p=>{
+      const paid = liveDays().reduce((s,d)=>s+Number((d.pay||{})[p.id]||0),0);
+      const days = liveDays().filter(d=>d.pay && p.id in d.pay).length;
+      html += '<div class="bk-row" data-person="'+esc(p.id)+'"><div class="grow">'+
+        '<div class="t">'+esc(p.name)+(p.archived?'<span class="tag">archived</span>':'')+'</div>'+
+        '<div class="s">'+days+' day'+(days===1?'':'s')+' · '+esc(peso(paid))+' all time</div></div>'+
+        '<div class="amt"></div></div>';
+    });
+  }
+  html += '</div><button class="btn outline" id="bkAddPerson">Add a person</button>';
+  return html;
+}
+
+/* ============ books: editing ============ */
+function editDay(k, draftIn){
+  let d = dayFor(k);
+  const draft = draftIn ? draftIn : d ? JSON.parse(JSON.stringify(d))
+    : {id:'d'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+       date:k, teamSales:0, pay:{}, incentive:0, paid:false, remarks:'', sales_source:'manual', deleted:false};
+  const till = tillTotalFor(k), count = tillCountFor(k);
+
+  const paint = m => {
+    const shown = draft.sales_source === 'manual' ? Number(draft.teamSales||0) : till;
+    $('#dTak', m).textContent = peso(shown);
+    $('#dTakNote', m).innerHTML = count
+      ? (draft.sales_source === 'manual'
+          ? 'Typed by hand. The till rang up '+esc(peso(till))+' across '+count+' sale'+(count===1?'':'s')+'.'
+          : 'From the till — '+count+' sale'+(count===1?'':'s')+'. Tap to type a different figure.')
+      : 'Nothing was rung up on the till this day.';
+    $('#dUseTill', m).hidden = !(count && draft.sales_source === 'manual');
+    const wage = Object.values(draft.pay||{}).reduce((a,b)=>a+Number(b||0),0) + Number(draft.incentive||0);
+    $('#dWage', m).textContent = peso(wage);
+    $$('.pay-line button', m).forEach(b=>{
+      const v = draft.pay[b.dataset.who];
+      b.textContent = v===undefined ? 'not working' : peso(v);
+      b.classList.toggle('set', v!==undefined);
+    });
+    $('#dInc', m).textContent = peso(draft.incentive||0);
+  };
+
+  const people = activePeople();
+  openModal(
+    '<h3>'+esc(fmtDay(k))+'</h3>'+
+    '<div class="display"><span class="k">Takings</span><span class="v" id="dTak">₱0.00</span></div>'+
+    '<p class="hint" id="dTakNote"></p>'+
+    '<div style="display:flex;gap:8px;margin:10px 0 16px">'+
+      '<button class="btn outline sm" id="dEditTak">Type a figure</button>'+
+      '<button class="btn outline sm" id="dUseTill" hidden>Use the till figure</button>'+
+    '</div>'+
+    '<div class="lbl">Who worked</div>'+
+    (people.length
+      ? '<div style="margin-bottom:14px">'+people.map(p=>
+          '<div class="pay-line"><span class="who">'+esc(p.name)+'</span>'+
+          '<button data-who="'+esc(p.id)+'">not working</button></div>').join('')+'</div>'
+      : '<p class="hint">Add people under Books → People first.</p>')+
+    '<div class="pay-line"><span class="who">Bonus / overtime</span>'+
+      '<button id="dInc">₱0.00</button></div>'+
+    '<div class="display" style="margin-top:14px"><span class="k">Wages for the day</span>'+
+      '<span class="v" id="dWage">₱0.00</span></div>'+
+    '<div class="field" style="margin-top:14px"><label for="dPaid">Wages paid out</label>'+
+      '<select id="dPaid"><option value="no">Not yet</option><option value="yes">Yes</option></select></div>'+
+    '<div class="field"><label for="dRem">Note</label>'+
+      '<input id="dRem" type="text" placeholder="half day, closed, rush job…"></div>'+
+    '<div class="modal-actions">'+
+      (d ? '<button class="btn danger" id="dDel">Delete</button>' : '<button class="btn ghost" id="dCancel">Cancel</button>')+
+      '<button class="btn primary" id="dSave">Save</button></div>',
+    m=>{
+      $('#dPaid', m).value = draft.paid ? 'yes' : 'no';
+      $('#dRem', m).value = draft.remarks || '';
+      paint(m);
+
+      // Same rule as the expense sheet: take the typed fields into the working
+      // copy before handing over to the pad, or the note is lost.
+      const grabTyped = ()=>{
+        draft.paid = $('#dPaid', m).value === 'yes';
+        draft.remarks = $('#dRem', m).value.trim();
+      };
+      $('#dEditTak', m).onclick = ()=>{ grabTyped(); numPad({
+        title:'Takings', label:'Takings', value:String(draft.sales_source==='manual'?(draft.teamSales||''):till),
+        hint: count ? 'The till rang up '+peso(till)+'. Typing here replaces it for this day.' : '',
+        onDone(v){ if(v!==null){ draft.teamSales = v; draft.sales_source='manual'; } editDay(k, draft); }
+      }); };
+      $('#dUseTill', m).onclick = ()=>{ draft.sales_source='till'; draft.teamSales=till; paint(m); };
+      $$('.pay-line button[data-who]', m).forEach(b=>{
+        b.onclick = ()=>{
+          const id = b.dataset.who;
+          if(draft.pay[id] !== undefined){ delete draft.pay[id]; paint(m); return; }
+          grabTyped();
+          numPad({title:'Pay', label:S.people.find(p=>p.id===id).name, value:'',
+            onDone(v){ if(v!==null) draft.pay[id]=v; editDay(k, draft); }});
+        };
+      });
+      $('#dInc', m).onclick = ()=>{ grabTyped(); numPad({title:'Bonus / overtime', label:'Amount',
+        value:String(draft.incentive||''), onDone(v){ if(v!==null) draft.incentive=v; editDay(k, draft); }}); };
+
+      if($('#dCancel', m)) $('#dCancel', m).onclick = closeModal;
+      if($('#dDel', m)) $('#dDel', m).onclick = ()=> confirmModal(
+        'Delete this day?', 'Wages and the note go. Till sales are not touched — the day will come back from the till.',
+        'Delete', ()=>{ const cur = dayFor(k); if(cur){ cur.deleted=true; touch(cur); persist.days(); }
+                        closeModal(); renderBooks(); scheduleSync(); toast('Day deleted'); }, true);
+      $('#dSave', m).onclick = ()=>{
+        draft.paid = $('#dPaid', m).value === 'yes';
+        draft.remarks = $('#dRem', m).value.trim();
+        const cur = dayFor(k);
+        if(cur) Object.assign(cur, draft, {id:cur.id});
+        else S.days.push(draft);
+        touch(cur || draft); persist.days();
+        closeModal(); renderBooks(); scheduleSync(); toast('Saved');
+      };
+    }
+  );
+}
+
+function editExpense(id, draftIn){
+  const e = id ? S.expenses.find(x=>x.id===id) : null;
+  const draft = draftIn ? draftIn : e ? {...e} : {id:'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+    month:bkMonth, name:'', amount:0, paid:true, deleted:false};
+  openModal(
+    '<h3>'+(e?'Edit expense':'Add an expense')+'</h3>'+
+    '<div class="field"><label for="xName">What was it</label>'+
+      '<input id="xName" type="text" placeholder="rent, ink, electricity…"></div>'+
+    '<div class="pay-line"><span class="who">Amount</span><button id="xAmt">₱0.00</button></div>'+
+    '<div class="field" style="margin-top:14px"><label for="xPaid">Paid</label>'+
+      '<select id="xPaid"><option value="yes">Yes</option><option value="no">Not yet</option></select></div>'+
+    '<div class="modal-actions">'+
+      (e ? '<button class="btn danger" id="xDel">Delete</button>' : '<button class="btn ghost" id="xCancel">Cancel</button>')+
+      '<button class="btn primary" id="xSave">Save</button></div>',
+    m=>{
+      $('#xName', m).value = draft.name;
+      $('#xPaid', m).value = draft.paid ? 'yes' : 'no';
+      $('#xAmt', m).textContent = peso(draft.amount);
+      // The pad replaces this modal, so anything typed has to be taken into the
+      // working copy first — afterwards these inputs no longer exist.
+      $('#xAmt', m).onclick = ()=>{
+        draft.name = $('#xName', m).value;
+        draft.paid = $('#xPaid', m).value === 'yes';
+        numPad({title:'Amount', label:'Amount', value:String(draft.amount||''),
+          onDone(v){ if(v!==null) draft.amount=v; editExpense(id, draft); }});
+      };
+      if($('#xCancel', m)) $('#xCancel', m).onclick = closeModal;
+      if($('#xDel', m)) $('#xDel', m).onclick = ()=> confirmModal('Delete this expense?','It stops counting against the month.','Delete',
+        ()=>{ e.deleted=true; touch(e); persist.expenses(); closeModal(); renderBooks(); scheduleSync(); toast('Deleted'); }, true);
+      $('#xSave', m).onclick = ()=>{
+        const name = $('#xName', m).value.trim();
+        if(!name){ toast('Give it a name'); return; }
+        draft.name = name; draft.paid = $('#xPaid', m).value === 'yes';
+        if(e) Object.assign(e, draft); else S.expenses.push(draft);
+        touch(e || draft); persist.expenses();
+        closeModal(); renderBooks(); scheduleSync(); toast('Saved');
+      };
+    }
+  );
+}
+
+function editPerson(id){
+  const p = id ? S.people.find(x=>x.id===id) : null;
+  openModal(
+    '<h3>'+(p?'Edit person':'Add a person')+'</h3>'+
+    '<div class="field"><label for="pName">Name</label><input id="pName" type="text" placeholder="Name"></div>'+
+    (p ? '<div class="field"><label for="pArch">Still working here</label>'+
+         '<select id="pArch"><option value="yes">Yes</option><option value="no">No — archive them</option></select></div>' : '')+
+    '<div class="modal-actions">'+
+      (p ? '<button class="btn danger" id="pDel">Remove</button>' : '<button class="btn ghost" id="pCancel">Cancel</button>')+
+      '<button class="btn primary" id="pSave">Save</button></div>',
+    m=>{
+      $('#pName', m).value = p ? p.name : '';
+      if(p) $('#pArch', m).value = p.archived ? 'no' : 'yes';
+      if($('#pCancel', m)) $('#pCancel', m).onclick = closeModal;
+      if($('#pDel', m)) $('#pDel', m).onclick = ()=>{
+        const used = liveDays().some(d=>d.pay && p.id in d.pay);
+        if(used){ toast(p.name+' has recorded days — archive instead'); return; }
+        confirmModal('Remove '+p.name+'?','','Remove',
+          ()=>{ p.deleted=true; touch(p); persist.people(); closeModal(); renderBooks(); scheduleSync(); toast('Removed'); }, true);
+      };
+      $('#pSave', m).onclick = ()=>{
+        const name = $('#pName', m).value.trim();
+        if(!name){ toast('Enter a name'); return; }
+        const clash = livePeople().some(x=>x.name.toLowerCase()===name.toLowerCase() && (!p || x.id!==p.id));
+        if(clash){ toast('There is already a '+name); return; }
+        if(p){ p.name=name; p.archived = $('#pArch', m).value==='no'; touch(p); }
+        else {
+          // Someone removed before keeps their record, so re-adding the name
+          // brings back their history instead of leaving a hidden row.
+          const prev = S.people.find(x=>x.deleted && x.name.toLowerCase()===name.toLowerCase());
+          if(prev){ prev.deleted=false; prev.archived=false; prev.name=name; touch(prev); }
+          else S.people.push(touch({id:'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+                                    name, archived:false, deleted:false}));
+        }
+        persist.people(); closeModal(); renderBooks(); scheduleSync(); toast('Saved');
+      };
+    }
+  );
+}
+
+/* ============ books: the printed report ============ */
+function buildBookReport(m){
+  const f = monthFigures(m);
+  const days = f.days.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const people = livePeople().filter(p => days.some(d=>d.pay && p.id in d.pay));
+  let h = '<h2>'+esc(S.settings.shop||'Mixel Bazaar')+' — '+esc(monthName(m))+'</h2>'+
+          '<div class="r-sub">Takings, wages and expenses</div>';
+
+  h += '<h3>Days</h3><table><thead><tr><th>Date</th><th class="num">Takings</th>'+
+       people.map(p=>'<th class="num">'+esc(p.name)+'</th>').join('')+
+       '<th class="num">Bonus</th><th class="num">Wages</th><th>Source</th><th>Note</th></tr></thead><tbody>';
+  days.forEach(d=>{
+    h += '<tr><td>'+esc(fmtShort(d.date))+'</td><td class="num">'+esc(peso(takingsFor(d)))+'</td>'+
+      people.map(p=>'<td class="num">'+((d.pay||{})[p.id]!==undefined?esc(peso(d.pay[p.id])):'—')+'</td>').join('')+
+      '<td class="num">'+(d.incentive?esc(peso(d.incentive)):'—')+'</td>'+
+      '<td class="num">'+esc(peso(wagesFor(d)))+'</td>'+
+      '<td>'+(d.sales_source==='manual'?'typed':'till')+'</td><td>'+esc(d.remarks||'')+'</td></tr>';
+  });
+  h += '<tr class="tot"><td>Total</td><td class="num">'+esc(peso(f.takings))+'</td>'+
+    people.map(p=>'<td class="num">'+esc(peso(days.reduce((s,d)=>s+Number((d.pay||{})[p.id]||0),0)))+'</td>').join('')+
+    '<td class="num">'+esc(peso(days.reduce((s,d)=>s+Number(d.incentive||0),0)))+'</td>'+
+    '<td class="num">'+esc(peso(f.wages))+'</td><td></td><td></td></tr></tbody></table>';
+
+  if(f.exps.length){
+    h += '<h3>Expenses</h3><table><thead><tr><th>Item</th><th class="num">Amount</th><th>Paid</th></tr></thead><tbody>';
+    f.exps.forEach(e=>{ h += '<tr><td>'+esc(e.name)+'</td><td class="num">'+esc(peso(e.amount))+'</td><td>'+(e.paid?'yes':'no')+'</td></tr>'; });
+    h += '<tr class="tot"><td>Total</td><td class="num">'+esc(peso(f.expenses))+'</td><td></td></tr></tbody></table>';
+  }
+
+  h += '<h3>Summary</h3><table><tbody>'+
+    '<tr><td>Takings</td><td class="num">'+esc(peso(f.takings))+'</td></tr>'+
+    '<tr><td>Wages</td><td class="num">−'+esc(peso(f.wages))+'</td></tr>'+
+    '<tr><td>Expenses</td><td class="num">−'+esc(peso(f.expenses))+'</td></tr>'+
+    '<tr class="tot"><td>Net</td><td class="num">'+esc(pesoSigned(f.net))+'</td></tr></tbody></table>';
+
+  h += '<div class="foot">Generated '+new Date().toLocaleString('en-PH')+'</div>';
+  return h;
+}
+
+async function pushDirty(){
+  for(const c of COLLECTIONS){
+    const dirty = S[c.key].filter(r=>r._dirty);
+    if(!dirty.length) continue;
+    const { data, error } = await sb.from(c.table).upsert(dirty.map(c.toRow)).select();
+    if(error) throw error;
+    (data||[]).forEach(row=>{
+      const local = S[c.key].find(r=>r.id===row.id);
+      if(local){ delete local._dirty; local.updated_at=row.updated_at; }
+    });
+  }
+}
+
+async function pullSince(){
+  const since = S.syncedAt || '1970-01-01T00:00:00Z';
+  let newest = since;
+  for(const c of COLLECTIONS){
+    const { data, error } = await sb.from(c.table).select('*').gt('updated_at', since);
+    if(error) throw error;
+    S[c.key] = merge(S[c.key], data||[], c.fromRow);
+    (data||[]).forEach(r=>{ if(stamp(r.updated_at) > stamp(newest)) newest = r.updated_at; });
+  }
+  S.syncedAt = newest;
+}
+
+// An empty list on the server means this is the first device: seed it from
+// here. Otherwise the server's list is the real one — drop the untouched local
+// defaults so they cannot sit alongside it as duplicates.
+async function seedOrAdopt(key){
+  const c = COL(key);
+  const { count, error } = await sb.from(c.table).select('id',{count:'exact',head:true});
+  if(error) throw error;
+  if(count === 0){ S[key].forEach(touch); return; }
+  S[key] = S[key].filter(r=>r._dirty);
+  const { data, error:e2 } = await sb.from(c.table).select('*');
+  if(e2) throw e2;
+  S[key] = merge(S[key], data||[], c.fromRow);
+}
+
+// First connection on a tablet. Read the server's newest stamp BEFORE pulling
+// anything, so a row written mid-bootstrap is re-pulled next time rather than
+// skipped — pulling twice is harmless, missing a row is not.
+async function bootstrap(){
+  let newest='1970-01-01T00:00:00Z';
+  for(const c of COLLECTIONS){
+    const { data, error } = await sb.from(c.table)
+      .select('updated_at').order('updated_at',{ascending:false}).limit(1);
+    if(error) throw error;
+    if(data && data[0] && stamp(data[0].updated_at) > stamp(newest)) newest = data[0].updated_at;
+  }
+
+  await seedOrAdopt('catalog');
+  await seedOrAdopt('methods');
+  S.settings.methodsSeeded = true; persist.set();
+
+  // Only recent history comes down to a new tablet. The rest stays on the
+  // server, where the daily report reads it.
+  const from = new Date(Date.now()-BOOTSTRAP_DAYS*86400000).toISOString();
+  const { data:sales, error:e3 } = await sb.from('bazaar_sales').select('*').gte('sold_at', from);
+  if(e3) throw e3;
+  S.sales = merge(S.sales, sales||[], COL('sales').fromRow)
+              .sort((a,b)=>b.ts-a.ts);
+
+  S.syncedAt = newest; persist.mark();
+}
+
+async function syncNow(){
+  if(!sb || !session || syncing) return;
+  if(!navigator.onLine){ setSync('offline'); return; }
+  syncing=true; setSync('syncing');
+  try{
+    if(!S.syncedAt) await bootstrap();
+    // Payment methods arrived after this app shipped. A device that had
+    // already bootstrapped never runs bootstrap() again, so settle its list
+    // against the server once — push the defaults if nobody has any yet,
+    // otherwise take whatever is already there.
+    if(!S.settings.methodsSeeded){
+      await seedOrAdopt('methods');
+      S.settings.methodsSeeded = true; persist.set(); persist.methods();
+    }
+    await pushDirty();
+    await pullSince();
+    S.sales.sort((a,b)=>b.ts-a.ts);
+    persist.catalog(); persist.methods(); persist.sales(); persist.days(); persist.people();
+    persist.expenses(); persist.mark();
+    afterSalesChanged();
+    renderChips(); renderGrid(); renderCart(); renderSales(); renderReport(); renderItems();
+    setSync('ok');
+  }catch(err){
+    // Local data is untouched on failure — it was saved before any of this ran.
+    console.error('sync failed', err);
+    setSync('error', 'Not synced — saved on this tablet');
+  }finally{ syncing=false; }
+}
+
+function scheduleSync(){
+  if(!SYNC_ON || !session) return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(syncNow, 1500);
+}
+
+function signInModal(){
+  const shared = !!SHARED_EMAIL;
+  openModal(
+    '<h3>Sign in to sync</h3>'+
+    '<p class="hint">'+(shared
+      ? 'Enter the shop access code. Sales keep working without it — they just stay on this tablet.'
+      : 'Sign in with your ledger email and password.')+'</p>'+
+    (shared
+      ? '<div class="field"><label>Access code</label><input id="gCode" type="password" inputmode="text" autocomplete="current-password"></div>'
+      : '<div class="field"><label>Email</label><input id="gEmail" type="email" autocomplete="username"></div>'+
+        '<div class="field"><label>Password</label><input id="gPass" type="password" autocomplete="current-password"></div>')+
+    '<p class="hint" id="gMsg" style="color:var(--ember);margin:0 0 12px"></p>'+
+    '<div class="modal-actions"><button class="btn ghost" id="gNo">Not now</button>'+
+    '<button class="btn primary" id="gGo">Sign in</button></div>',
+    m=>{
+      const msg=$('#gMsg',m), go=$('#gGo',m);
+      $('#gNo',m).onclick=closeModal;
+      go.onclick=async ()=>{
+        msg.textContent=''; go.disabled=true; go.textContent='Working…';
+        try{
+          const creds = shared
+            ? { email:SHARED_EMAIL, password:$('#gCode',m).value }
+            : { email:$('#gEmail',m).value.trim(), password:$('#gPass',m).value };
+          if(!creds.email || !creds.password) throw new Error(shared?'Enter the access code.':'Enter your email and password.');
+          const { data, error } = await sb.auth.signInWithPassword(creds);
+          if(error) throw new Error(/invalid/i.test(error.message) ? 'That is not right.' : error.message);
+          session=data.session; closeModal(); setSync('syncing'); syncNow();
+        }catch(err){
+          msg.textContent = err.message || 'That did not work.';
+          go.disabled=false; go.textContent='Sign in';
+        }
+      };
+      const first=$('#gCode',m)||$('#gEmail',m);
+      setTimeout(()=>first&&first.focus(),50);
+    }
+  );
+}
+
+$('#syncAction').addEventListener('click',()=>{
+  if(!sb){ toast('Still connecting…'); return; }
+  if(session){
+    confirmModal('Sign out?','This tablet stops syncing. Sales already sent are safe, and new ones keep saving here.','Sign out',async ()=>{
+      await sb.auth.signOut(); session=null; setSync('signedout'); toast('Signed out');
+    },true);
+  } else signInModal();
+});
+
+async function initSync(){
+  if(!SYNC_ON){ $('#syncPill').hidden=true; return; }
+  setSync('syncing','Connecting…');
+  try{
+    const mod = await import('https://esm.sh/@supabase/supabase-js@2.45.4');
+    sb = mod.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+  }catch(e){
+    console.error('could not load supabase-js', e);
+    setSync('error','Offline — saving on this tablet');
+    return;
+  }
+  const { data } = await sb.auth.getSession();
+  session = data ? data.session : null;
+  sb.auth.onAuthStateChange((_e,sess)=>{ session=sess; setSync(sess?'ok':'signedout'); });
+  setSync(session?'ok':'signedout');
+  if(session) syncNow();
+  setInterval(()=>{ if(session) syncNow(); }, 30000);
+  window.addEventListener('online',  ()=>scheduleSync());
+  window.addEventListener('offline', ()=>setSync('offline'));
+  window.addEventListener('focus',   ()=>{ if(session) scheduleSync(); });
+}
+
+/* ============ boot ============ */
+$('#shopName').textContent=S.settings.shop;
+pruneOldSales();
+refreshTillDays();          // catch up the books on anything sold while away
+renderChips(); renderGrid(); renderCart(); renderSales(); renderReport(); renderItems();
+renderBooks();
+initSync();
+})();
+</script>
+</body>
+</html>

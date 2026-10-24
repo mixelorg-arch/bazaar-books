@@ -1,0 +1,8 @@
+.DS_Store
+# Build output — rebuild with ./build_app.sh && ./build_dmg.sh
+Bazaar Books.app/
+BazaarBooks.dmg
+.dmg_stage/
+AppIcon.icns
+icon_1024.png
+supabase/.temp/
